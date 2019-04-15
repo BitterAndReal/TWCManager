@@ -150,7 +150,7 @@ rs485Adapter = '/dev/ttyUSB0'
 # 100 amp breaker * 0.8 = 80 here.
 # IF YOU'RE NOT SURE WHAT TO PUT HERE, ASK THE ELECTRICIAN WHO INSTALLED YOUR
 # CHARGER.
-wiringMaxAmpsAllTWCs = 40
+wiringMaxAmpsAllTWCs = 20
 
 # If all your chargers share a single circuit breaker, set wiringMaxAmpsPerTWC
 # to the same value as wiringMaxAmpsAllTWCs.
@@ -160,7 +160,7 @@ wiringMaxAmpsAllTWCs = 40
 # wiringMaxAmpsAllTWCs.
 # For example, if you have two TWCs each with a 50A breaker, set
 # wiringMaxAmpsPerTWC = 50 * 0.8 = 40 and wiringMaxAmpsAllTWCs = 40 + 40 = 80.
-wiringMaxAmpsPerTWC = 40
+wiringMaxAmpsPerTWC = 20
 
 # https://teslamotorsclub.com/tmc/threads/model-s-gen2-charger-efficiency-testing.78740/#post-1844789
 # says you're using 10.85% more power (91.75/82.77=1.1085) charging at 5A vs 40A,
@@ -192,7 +192,7 @@ wiringMaxAmpsPerTWC = 40
 # can't reach that rate, so charging as fast as your wiring supports is best
 # from that standpoint.  It's not clear how much damage charging at slower
 # rates really does.
-minAmpsPerTWC = 12
+minAmpsPerTWC = 5
 
 # When you have more than one vehicle associated with the Tesla car API and
 # onlyChargeMultiCarsAtHome = True, cars will only be controlled by the API when
@@ -263,6 +263,14 @@ fakeTWCID = bytearray(b'\x77\x77')
 # These shouldn't need to be changed.
 masterSign = bytearray(b'\x77')
 slaveSign = bytearray(b'\x77')
+
+
+# set maxAmpsMains to 90% of the main power connection fuse of your house
+# the most common main fuse values in the Netherlands are: 
+#   single phase 35amps = 28
+#   or 3 phase 25amps = 22
+maxAmpsMains = 22
+
 
 #
 # End configuration parameters
@@ -1970,6 +1978,119 @@ class TWCSlave:
                     ".\nSee notes above wiringMaxAmpsAllTWCs in the 'Configuration parameters' section.")
             maxAmpsToDivideAmongSlaves = wiringMaxAmpsAllTWCs
 
+            
+      global maxAmpsMains
+        
+        
+        # I used the following Raspberrypi zero shield to measure the mains current:
+        # 3 CT and 1 temperature adapter
+        # http://lechacal.com/wiki/index.php/RPIZ_CT3T1
+        # http://lechacalshop.com/gb/internetofthing/64-rpizct3t1.html
+        
+        
+        # read current sensors 
+        # the following parameters are measured by the RaspberryPi AC board
+        # mains[0] AC measure board ID
+        # mains[1] amps L1
+        # mains[2] amps L2
+        # mains[3] amps L3
+        # mains[4] temp of the fuse could be measured
+        
+        import serial
+            ser = serial.Serial('/dev/ttyAMA0', 38400)
+
+            try:
+                while 1:
+                    # Read one line from the serial buffer
+                    line = ser.readline()
+
+                    # Remove the trailing carriage return line feed
+                    line = line[:-2]
+
+                    # Split the string at each space and create an array of the data
+                    mains = line.split(' ')
+                       
+        except KeyboardInterrupt:
+        ser.close()
+        
+        
+
+        
+        '''
+        # If you want to use the dutch smart meter to read the AC current you could try DSRM-reader for RaspberryPi
+        # It has the following RESTful API.
+        # documented here: https://dsmr-reader.readthedocs.io/en/latest/api.html#example-2-fetch-latest-reading
+        # Requirements:
+        #   Hardware: RaspberryPi 3
+        #   OS: Raspbian OS
+        #   Python: 3.5+
+        #   Database: PostgreSQL 9+
+        #   SD disk space: 1+ GB
+        #   P1 telegram cable
+        
+        # Request power with DSRM-reader API:
+        import requests
+        import json
+
+        response = requests.get(
+            'http://YOUR-DSMR-URL/api/v2/datalogger/dsmrreading?ordering=-timestamp&limit=1',
+            headers={'X-AUTHKEY': 'YOUR-API-KEY'},
+        )
+        
+        if response and response.status_code == 200:
+            json_data = response.json()
+            if json_data and 'results' in json_data:
+                if 'phase_currently_delivered_l1' in json_data['results']:
+                   mains[1] = results.get('phase_currently_delivered_l1')*1000/230
+                   mains[2] = results.get('phase_currently_delivered_l2')*1000/230
+                   mains[3] = results.get('phase_currently_delivered_l3')*1000/230
+        #          phase_currently_delivered_l... (float) - Current electricity used by phase L1 (in kW)
+        
+        else:
+            if debugLevel >= 1:
+                print('DSRM-reader Error: {}'.format(response.text))
+        '''
+        
+        
+        # Define how many samples are taken to calculate an average
+        # A small current spike should not trigger the main fuse.
+        # 1,1 x In for one hour // 1,5 x In for 10 min // 2 x In for 1 min // 3 x In for 10s // 10 x In for 0.1s
+        mainsSampleCount = 4
+        
+        # shift samples array to the right
+        for i in range(mainsSampleCount -1, -1, -1):    
+            mainsSample[i] = mainsSample[i-1]
+        
+        # find phase with highest current which is the limit for all phases
+        mainsSample[0] = max(mains[1:4])
+            
+        # calculate average of the samples
+        mainsAvg = sum(mainsSample) / len(mainsSample) 
+        
+        
+        if(debugLevel >= 1):
+            print(time_now() +
+                " mains[1] " + str(mains[1]) +
+                " mains[2] " + str(mains[2]) +
+                " mains[3] " + str(mains[3]) +
+                " mainsSample[0] " + str(mainsSample[0]) +
+                " mainsAvg " + str(mainsAvg)
+
+        # calculate left over amps for all TWCs
+        loadBalancingAmpsAllTWCs = maxAmpsMains - mainsAvg
+            
+        if(maxAmpsToDivideAmongSlaves > loadBalancingAmpsAllTWCs):
+            # Never tell the slaves to draw more amps than the main fuse can handle.
+            if(debugLevel >= 1):
+                print(time_now() + 
+                    " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
+                    " limited by loadBalancingAmpsAllTWCs " + str(loadBalancingAmpsAllTWCs))
+            maxAmpsToDivideAmongSlaves = loadBalancingAmpsAllTWCs
+                  
+                  
+
+            
+            
         # Determine how many cars are charging and how many amps they're using
         numCarsCharging = 1
         desiredAmpsOffered = maxAmpsToDivideAmongSlaves

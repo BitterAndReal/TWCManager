@@ -1979,22 +1979,32 @@ class TWCSlave:
             maxAmpsToDivideAmongSlaves = wiringMaxAmpsAllTWCs
 
             
-      global maxAmpsMains
+    global maxAmpsMains
         
         
         # I used the following Raspberrypi zero shield to measure the mains current:
-        # 3 CT and 1 temperature adapter
-        # http://lechacal.com/wiki/index.php/RPIZ_CT3T1
-        # http://lechacalshop.com/gb/internetofthing/64-rpizct3t1.html
+        # 3 current and 1 voltage adapter
+        # http://lechacal.com/wiki/index.php?title=RPIZ_CT3V1
+        # http://lechacalshop.com/gb/internetofthing/63-rpizct3v1.html
         
+        # Serial Output: NodeID Realpower1 ApparentPower1 Irms1 Vrms1 PowerFactor1 Realpower2 ApparentPower2 Irms2 Vrms2 PowerFactor2 Realpower3 ApparentPower3 Irms3 Vrms3 PowerFactor3
         
-        # read current sensors 
-        # the following parameters are measured by the RaspberryPi AC board
-        # mains[0] AC measure board ID
-        # mains[1] amps L1
-        # mains[2] amps L2
-        # mains[3] amps L3
-        # mains[4] temp of the fuse could be measured
+        # mains[0] AC board NodeID
+        # mains[1] RealPower L1
+        # mains[2] ApparentPower L1
+         # mains[3] Irms L1
+        # mains[4] Vrms L1
+        # mains[5] PowerFactor L1
+        # mains[6] RealPower L2
+        # mains[7] ApparentPower L2
+         # mains[8] Irms L2
+        # mains[9] Vrms L2
+        # mains[10] PowerFactor L2
+        # mains[11] RealPower L3
+        # mains[12] ApparentPower L3
+         # mains[13] Irms L3
+        # mains[14] Vrms L3
+        # mains[15] PowerFactor L3
         
         import serial
             ser = serial.Serial('/dev/ttyAMA0', 38400)
@@ -2013,7 +2023,11 @@ class TWCSlave:
         except KeyboardInterrupt:
         ser.close()
         
-        
+        # I'm only interested in the three current measurements
+        # put the L1, L2 & L3 Amps in an array
+        mainsAmps[0] = mains[3]
+        mainsAmps[1] = mains[8]
+        mainsAmps[2] = mains[13]
 
         
         '''
@@ -2041,10 +2055,10 @@ class TWCSlave:
             json_data = response.json()
             if json_data and 'results' in json_data:
                 if 'phase_currently_delivered_l1' in json_data['results']:
-                   mains[1] = results.get('phase_currently_delivered_l1')*1000/230
-                   mains[2] = results.get('phase_currently_delivered_l2')*1000/230
-                   mains[3] = results.get('phase_currently_delivered_l3')*1000/230
-        #          phase_currently_delivered_l... (float) - Current electricity used by phase L1 (in kW)
+                   mainsAmps[0] = results.get('phase_currently_delivered_l1')*1000/230
+                   mainsAmps[1] = results.get('phase_currently_delivered_l2')*1000/230
+                   mainsAmps[2] = results.get('phase_currently_delivered_l3')*1000/230
+        #          phase_currently_delivered_l... (float) - Current electricity used by phase L... (in kW)
         
         else:
             if debugLevel >= 1:
@@ -2062,7 +2076,7 @@ class TWCSlave:
             mainsSample[i] = mainsSample[i-1]
         
         # find phase with highest current which is the limit for all phases
-        mainsSample[0] = max(mains[1:4])
+        mainsSample[0] = max(mainsAmps)
             
         # calculate average of the samples
         mainsAvg = sum(mainsSample) / len(mainsSample) 
@@ -2070,14 +2084,14 @@ class TWCSlave:
         
         if(debugLevel >= 1):
             print(time_now() +
-                " mains[1] " + str(mains[1]) +
-                " mains[2] " + str(mains[2]) +
-                " mains[3] " + str(mains[3]) +
-                " mainsSample[0] " + str(mainsSample[0]) +
-                " mainsAvg " + str(mainsAvg)
+                " Amps L1 " + str(mainsAmps[0]) +
+                " Amps L2 " + str(mainsAmps[1]) +
+                " Amps L3 " + str(mainsAmps[2]) +
+                " last mains Sample " + str(mainsSample[0]) +
+                " mains Amps Avg " + str(mainsAmpsAvg)
 
         # calculate left over amps for all TWCs
-        loadBalancingAmpsAllTWCs = maxAmpsMains - mainsAvg
+        loadBalancingAmpsAllTWCs = maxAmpsMains - mainsAmpsAvg
             
         if(maxAmpsToDivideAmongSlaves > loadBalancingAmpsAllTWCs):
             # Never tell the slaves to draw more amps than the main fuse can handle.

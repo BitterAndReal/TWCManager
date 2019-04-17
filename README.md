@@ -4,3 +4,6 @@ TWCManager lets you control the amount of power delivered by a Tesla Wall Connec
 Due to hardware limitations, TWCManager will not work with Tesla's older High Power Wall Connectors (HPWCs) that were discontinued around April 2016.
 
 See **TWCManager Installation.pdf** for how to install and use.
+
+# download the forked code to your raspberry pi using this git command:
+# git clone -b master --single-branch https://github.com/BitterAndReal/TWCManager.git~/TWC

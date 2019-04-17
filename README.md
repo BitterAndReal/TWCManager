@@ -5,5 +5,5 @@ Due to hardware limitations, TWCManager will not work with Tesla's older High Po
 
 See **TWCManager Installation.pdf** for how to install and use.
 
-# download the forked code to your raspberry pi using this git command:
-# git clone -b master --single-branch https://github.com/BitterAndReal/TWCManager.git~/TWC
+download the forked code to your raspberry pi using this git command:
+git clone -b master --single-branch https://github.com/BitterAndReal/TWCManager.git~/TWC

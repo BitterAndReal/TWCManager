@@ -2007,6 +2007,14 @@ class TWCSlave:
         # mains[15] PowerFactor L3
         
         import serial
+        
+            # if TWCmanager and mains connection are far away from each other we can use two raspberry pi connected to the same network
+            # device with the current measure shield with ser2net
+            # (2000:raw:600:/dev/ttyS1:389400 8DATABITS NONE 1STOPBIT)
+            
+            # and pi with TWCmanager uses socat
+            # socat -v /dev/ttyAMA0 tcp-connect:localhost:2000
+            
             ser = serial.Serial('/dev/ttyAMA0', 38400)
 
             try:

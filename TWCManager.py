@@ -2010,9 +2010,11 @@ class TWCSlave:
         
             # if TWCmanager and mains connection are far away from each other we can use two raspberry pi connected to the same network
             # device with the current measure shield with ser2net
-            # (2000:raw:600:/dev/ttyS1:389400 8DATABITS NONE 1STOPBIT)
+            # 2000:raw:0:/dev/ttyAMA0:38400 8DATABITS NONE 1STOPBIT -XONXOFF -RTSCTS
+            # /etc/init.d/ser2net restart
             
-            # and pi with TWCmanager uses socat
+            # and pi with TWCmanager using socat to Connect a Pseudo TTY to the Remote Serial Port
+            # socat pty,link=$HOME/dev/ttyAMA0,waitslave tcp:SerialMachine:2000
             # socat -v /dev/ttyAMA0 tcp-connect:localhost:2000
             
             ser = serial.Serial('/dev/ttyAMA0', 38400)

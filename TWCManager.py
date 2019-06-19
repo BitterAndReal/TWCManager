@@ -2006,32 +2006,81 @@ class TWCSlave:
         # mains[14] Vrms L3
         # mains[15] PowerFactor L3
         
-        import serial
+            # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
+            # run sudo raspi-config 
+            # Select Interfacing Options / Serial 
+            # then specify if you want a Serial console (no) 
+            # then if you want the Serial Port hardware enabled (yes). 
+            # Then use /dev/serial0 in any code which accesses the Serial Port.
+
         
-            # if TWCmanager and mains connection are far away from each other we can use two raspberry pi connected to the same network
-            # device with the current measure shield with ser2net
-            # 2000:raw:0:/dev/ttyAMA0:38400 8DATABITS NONE 1STOPBIT -XONXOFF -RTSCTS
-            # /etc/init.d/ser2net restart
+            # if TWC and mains connection are far away from each other it is possible to use two raspberry pi connected to the same network
+            # device with the current measure shield using ser2net with the following config:
+            # sudo apt-get install ser2net
+            # sudo nano /etc/ser2net.conf
+            # add this line: 2000:raw:0:/dev/serial0:38400 8DATABITS NONE 1STOPBIT banner
+            # sudo /etc/init.d/ser2net restart
             
-            # and pi with TWCmanager using socat to Connect a Pseudo TTY to the Remote Serial Port
-            # socat pty,link=$HOME/dev/ttyAMA0,waitslave tcp:SerialMachine:2000
-            # socat -v /dev/ttyAMA0 tcp-connect:localhost:2000
-            
-            ser = serial.Serial('/dev/ttyAMA0', 38400)
+            # sudo nano /etc/inittab
+            # % add hash to this line
+            # #T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
 
-            try:
-                while 1:
+            # sudo nano /boot/cmdline.txt
+            # % delete references to ttyAMA0
+            # % "console=ttyAMA0,115200 kgdboc=ttyAMA0,115200"
+
+            # sudo shutdown -r now
+            
+            
+            
+            # and the pi with TWCmanager (Client) using socat to connect a pseudo TTY to the remote serial port
+            # socat pty,link=$HOME/dev/serial0,waitslave tcp:SerialMachine:2000
+            # socat -v /dev/serial0 tcp-connect:SerialMachine:2000
+            
+            # and the pi with TWCmanager (Client) using a socket TCP connection
+            import socket
+ 
+             TCP_IP = '127.0.0.1' # IP of raspberry pi with current measure shield (server)
+             TCP_PORT = 2000
+             BUFFER_SIZE = 1024
+ 
+             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+             s.connect((TCP_IP, TCP_PORT))
+             data = s.recv(BUFFER_SIZE)
+             try:
+                 while 1:
                     # Read one line from the serial buffer
-                    line = ser.readline()
-
+                    line = s.readline()
+            
                     # Remove the trailing carriage return line feed
                     line = line[:-2]
 
                     # Split the string at each space and create an array of the data
                     mains = line.split(' ')
+              s.close()
+            
+        
+        
+       # if the current measure shield is on the same raspberry pi as the TWCmanager use...
+    
+        # import serial
+            
+        #     ser = serial.Serial('/dev/serial0', 38400)
+        #     # for older raspberry pi without bluetooth use: ser = serial.Serial('/dev/ttyAMA0', 38400)
+
+        #     try:
+        #         while 1:
+        #             # Read one line from the serial buffer
+        #             line = ser.readline()
+
+        #             # Remove the trailing carriage return line feed
+        #             line = line[:-2]
+
+        #             # Split the string at each space and create an array of the data
+        #             mains = line.split(' ')
                        
-        except KeyboardInterrupt:
-        ser.close()
+        # except KeyboardInterrupt:
+        # ser.close()
         
         # I'm only interested in the three current measurements
         # put the L1, L2 & L3 Amps in an array
@@ -2099,7 +2148,7 @@ class TWCSlave:
                 " Amps L3 " + str(mainsAmps[2]) +
                 " last mains Sample " + str(mainsSample[0]) +
                 " mains Amps Avg " + str(mainsAmpsAvg)
-
+                  
         # calculate left over amps for all TWCs
         loadBalancingAmpsAllTWCs = maxAmpsMains - mainsAmpsAvg
             

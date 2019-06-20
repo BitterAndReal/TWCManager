@@ -272,6 +272,47 @@ slaveSign = bytearray(b'\x77')
 maxAmpsMains = 22
 
 
+
+# if the current measure shield is on the same raspberry pi as the TWCmanager '/dev/serial0' should work
+# if a Raspberey pi remote server with ser2net and current measure shield is used we need a virtual TTY poert '/dev/ttyV0'
+CurrentMeasureSerialAdapter = '/dev/ttyV0'
+          
+    # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
+    # run sudo raspi-config 
+    # Select Interfacing Options / Serial 
+    # then specify if you want a Serial console (no) 
+    # then if you want the Serial Port hardware enabled (yes). 
+    # Then use /dev/serial0 in any code which accesses the Serial Port.
+    
+# if TWC and mains connection are far away from each other it is possible to use two raspberry pi connected to the same network
+# device with the current measure shield using ser2net with the following config:
+            
+    # sudo apt-get install ser2net
+    # sudo nano /etc/ser2net.conf
+    # add this line: 2000:raw:0:/dev/serial0:38400 8DATABITS NONE 1STOPBIT banner
+    # sudo /etc/init.d/ser2net restart
+            
+            
+    # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
+    # run sudo raspi-config 
+    # Select Interfacing Options / Serial 
+    # then specify if you want a Serial console (no) 
+    # then if you want the Serial Port hardware enabled (yes). 
+    # Then use /dev/serial0 in any code which accesses the Serial Port.
+
+    # sudo shutdown -r now
+            
+ #####
+            
+ # and the pi with TWCmanager (Client) using socat to connect a virtual TTY to the remote serial port
+    # instal socat with:
+    # git clone -b master --single-branch https://github.com/craSH/socat
+    # sudo nano /etc/rc.local
+    # add the following line bevore exit 0:
+    # socat pty,link=$HOME/dev/ttyV0,waitslave tcp:127.0.0.1:2000$ 
+    # sudo reboot
+            
+
 #
 # End configuration parameters
 #
@@ -2007,51 +2048,10 @@ class TWCSlave:
         # mains[15] PowerFactor L3
 
         
-            # if TWC and mains connection are far away from each other it is possible to use two raspberry pi connected to the same network
-            # device with the current measure shield using ser2net with the following config:
-            
-                # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
-                # run sudo raspi-config 
-                # Select Interfacing Options / Serial 
-                # then specify if you want a Serial console (no) 
-                # then if you want the Serial Port hardware enabled (yes). 
-                # Then use /dev/serial0 in any code which accesses the Serial Port.
-            
-            # sudo apt-get install ser2net
-            # sudo nano /etc/ser2net.conf
-            # add this line: 2000:raw:0:/dev/serial0:38400 8DATABITS NONE 1STOPBIT banner
-            # sudo /etc/init.d/ser2net restart
-            
-            
-             # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
-                # run sudo raspi-config 
-                # Select Interfacing Options / Serial 
-                # then specify if you want a Serial console (no) 
-                # then if you want the Serial Port hardware enabled (yes). 
-                # Then use /dev/serial0 in any code which accesses the Serial Port.
-
-            # sudo shutdown -r now
-            
-            ------------------------------------------------------
-            
-            # and the pi with TWCmanager (Client) using socat to connect a pseudo TTY to the remote serial port
-            # instal socat with:
-            # git clone -b master --single-branch https://github.com/craSH/socat
-            # sudo nano /etc/rc.local
-            # add the following line bevore exit 0:
-            # socat pty,link=$HOME/dev/ttyV0,waitslave tcp:127.0.0.1:2000$
-            
-            # sudo reboot
-            
-           
-        
     
          import serial
             
-            # ser = serial.Serial('/dev/serial0', 38400) # if the current measure shield is on the same raspberry pi as the TWCmanager
-            # ser = serial.Serial('/dev/ttyAMA0', 38400) # for older raspberry pi without bluetooth
-            ser = serial.Serial('/dev/ttyV0', 38400) # if remote server (ser2net) pi with current measure shield is used 
-             
+            ser = serial.Serial(CurrentMeasureSerialAdapter, 38400)
 
              try:
                  while 1:

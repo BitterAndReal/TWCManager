@@ -2135,7 +2135,7 @@ class TWCSlave:
                 " mains Amps Avg " + str(mainsAmpsAvg)
                   
         # calculate left over amps for all TWCs
-        loadBalancingAmpsAllTWCs = maxAmpsMains - mainsAmpsAvg
+        loadBalancingAmpsAllTWCs = maxAmpsMains - mainsAmpsAvg + total_amps_actual_all_twcs()
             
         if(maxAmpsToDivideAmongSlaves > loadBalancingAmpsAllTWCs):
             # Never tell the slaves to draw more amps than the main fuse can handle.

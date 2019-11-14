@@ -3212,7 +3212,7 @@ while True:
                             slaveTWC.minAmpsTWCSupports = 5
                         elif(len(msg) == 16):
                             slaveTWC.protocolVersion = 2
-                            slaveTWC.minAmpsTWCSupports = 6
+                            slaveTWC.minAmpsTWCSupports = 3
 
                         if(debugLevel >= 1):
                             print(time_now() + ": Set slave TWC %02X%02X protocolVersion to %d, minAmpsTWCSupports to %d." % \

@@ -339,7 +339,7 @@
                     }
 
                     // Display info about each TWC being managed.
-                    for($i = 0; $i <= $status[$statusIdx]; $i++) {
+                    for($i = 1; $i <= $status[$statusIdx]; $i++) {
                         $subStatus = explode('~', $status[$statusIdx + $i]);
                         $twcModelMaxAmps = $subStatus[1];
                         print("</p><strong>TWC " . $subStatus[0] . ':</strong> ');
@@ -409,7 +409,13 @@
                                             '15A' => '15',
                                             '16A' => '16',
                                             '17A' => '17',
+                                            '18A' => '18',
+                                            '19A' => '19',
+                                            '20A' => '20',
                                             '21A' => '21',
+                                            '22A' => '22',
+                                            '23A' => '23',
+                                            '24A' => '24',
                                             '25A' => '25',
                                             '32A' => '32',
                                         );
@@ -495,13 +501,13 @@
             </p>
             <p style="margin-top:0.3em; margin-bottom:0; padding-top:0;">
                 <strong>on days</strong>
-                <?php DisplayCheckbox("scheduledAmpsDay[0]", '', '1') ?>Su
                 <?php DisplayCheckbox("scheduledAmpsDay[1]", '', '1') ?>Mo
                 <?php DisplayCheckbox("scheduledAmpsDay[2]", '', '1') ?>Tu
                 <?php DisplayCheckbox("scheduledAmpsDay[3]", '', '1') ?>We
                 <?php DisplayCheckbox("scheduledAmpsDay[4]", '', '1') ?>Th
                 <?php DisplayCheckbox("scheduledAmpsDay[5]", '', '1') ?>Fr
                 <?php DisplayCheckbox("scheduledAmpsDay[6]", '', '1') ?>Sa
+                <?php DisplayCheckbox("scheduledAmpsDay[0]", '', '1') ?>Su
             </p>
         </div>
 

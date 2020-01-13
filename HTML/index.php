@@ -339,10 +339,10 @@
                     }
 
                     // Display info about each TWC being managed.
-                    for($i = 0; $i < $status[$statusIdx]; $i++) {
-                        $subStatus = explode('~', $status[$statusIdx + 1]);
+                    for($i = 0; $i <= $status[$statusIdx]; $i++) {
+                        $subStatus = explode('~', $status[$statusIdx + $i]);
                         $twcModelMaxAmps = $subStatus[1];
-                        print("<strong>TWC " . $subStatus[0] . ':</strong> ');
+                        print("</p><strong>TWC " . $subStatus[0] . ':</strong> ');
                         if($subStatus[2] < 1.0) {
                             /*if($subStatus[4] == 0) {
                                 // I was hoping state 0 meant no car is plugged in, but
@@ -395,10 +395,19 @@
                     // below.
                     $use24HourTime = true;
                     $aryStandardAmps = array(
+                                            '4A' => '4',
+                                            '5A' => '5',
                                             '6A' => '6',
+                                            '7A' => '7',
                                             '8A' => '8',
+                                            '9A' => '9',
                                             '10A' => '10',
+                                            '11A' => '11',
+                                            '12A' => '12',
                                             '13A' => '13',
+                                            '14A' => '14',
+                                            '15A' => '15',
+                                            '16A' => '16',
                                             '17A' => '17',
                                             '21A' => '21',
                                             '25A' => '25',

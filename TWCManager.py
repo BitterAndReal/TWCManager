@@ -2061,7 +2061,7 @@ class TWCSlave:
                      # Remove the trailing carriage return line feed
                      line = line[:-2]
 
-                     # Split the string at each space and create an array of the data
+                     # Split the string at each space and create a list of the data
                      mains = line.split(' ')
                        
          except KeyboardInterrupt:
@@ -2118,9 +2118,12 @@ class TWCSlave:
         # shift samples array to the right
         for i in range(mainsSampleCount -1, -1, -1):    
             mainsSample[i] = mainsSample[i-1]
+          
+        # remove last value from samples list
+        mainsSample = mainsSample[:mainsSampleCount]
         
-        # find phase with highest current which is the limit for all phases
-        mainsSample[0] = max(mainsAmps)
+        # find phase with highest current which is the limit for all phases and insert at beginning of samples list
+        mainsSample.insert(0, max(mainsAmps))
             
         # calculate average of the samples
         mainsAvg = sum(mainsSample) / len(mainsSample) 

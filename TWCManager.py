@@ -1893,7 +1893,8 @@ class TWCSlave:
                maxAmpsToDivideAmongSlaves, wiringMaxAmpsAllTWCs, \
                timeLastGreenEnergyCheck, greenEnergyAmpsOffset, \
                slaveTWCRoundRobin, spikeAmpsToCancel6ALimit, \
-               chargeNowAmps, chargeNowTimeEnd, minAmpsPerTWC
+               chargeNowAmps, chargeNowTimeEnd, minAmpsPerTWC, \
+               maxAmpsMains, CurrentMeasureSerialAdapter
 
         now = time.time()
         self.timeLastRx = now
@@ -2020,8 +2021,6 @@ class TWCSlave:
             maxAmpsToDivideAmongSlaves = wiringMaxAmpsAllTWCs
 
             
-    global maxAmpsMains
-    global CurrentMeasureSerialAdapter
         
         
         # I used the following Raspberrypi zero shield to measure the mains current:

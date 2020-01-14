@@ -291,9 +291,8 @@ CurrentMeasureSerialAdapter = '/dev/ttyV0'
     # sudo nano /etc/ser2net.conf
     # add this line: 2000:raw:0:/dev/serial0:38400 8DATABITS NONE 1STOPBIT banner
     # sudo /etc/init.d/ser2net restart
-            
-            
-    # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
+
+   # And serial port needs to be enabled
     # run sudo raspi-config 
     # Select Interfacing Options / Serial 
     # then specify if you want a Serial console (no) 
@@ -305,12 +304,13 @@ CurrentMeasureSerialAdapter = '/dev/ttyV0'
  #####
             
  # and the pi with TWCmanager (Client) using socat to connect a virtual TTY to the remote serial port
-    # instal socat with:
+   # instal socat with:
     # git clone -b master --single-branch https://github.com/craSH/socat
+   # and let socat start at boot
     # sudo nano /etc/rc.local
-    # add the following line bevore exit 0:
-    # socat pty,link=$HOME/dev/ttyV0,waitslave tcp:127.0.0.1:2000$ 
-    # sudo reboot
+   # add the following line bevore exit 0:
+    # socat pty,link=$HOME/dev/ttyV0,waitslave tcp:192.168.0.67:2000$
+   # sudo reboot
             
 
 #
@@ -2021,6 +2021,7 @@ class TWCSlave:
 
             
     global maxAmpsMains
+    global CurrentMeasureSerialAdapter
         
         
         # I used the following Raspberrypi zero shield to measure the mains current:

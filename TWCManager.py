@@ -1367,6 +1367,144 @@ def check_green_energy():
             " ERROR: Can't determine current solar generation from:\n" +
             str(greenEnergyData))
 
+
+def check_main_fuse_current():
+    global debugLevel, maxAmpsToDivideAmongSlaves, \
+           minAmpsPerTWC, backgroundTasksLock, \
+           CurrentMeasureSerialAdapter, maxAmpsMains
+          
+        
+    '''
+    # If you want to use the dutch smart meter to read the AC current you could try DSRM-reader for RaspberryPi
+    # It has the following RESTful API.
+    # documented here: https://dsmr-reader.readthedocs.io/en/latest/api.html#example-2-fetch-latest-reading
+    # Requirements:
+    #   Hardware: RaspberryPi 3
+    #   OS: Raspbian OS
+    #   Python: 3.5+
+    #   Database: PostgreSQL 9+
+    #   SD disk space: 1+ GB
+    #   P1 telegram cable
+        
+    # Request power with DSRM-reader API:
+    import requests
+    import json
+
+    response = requests.get(
+        'http://YOUR-DSMR-URL/api/v2/datalogger/dsmrreading?ordering=-timestamp&limit=1',
+        headers={'X-AUTHKEY': 'YOUR-API-KEY'},
+    )
+        
+    if response and response.status_code == 200:
+        json_data = response.json()
+        if json_data and 'results' in json_data:
+            if 'phase_currently_delivered_l1' in json_data['results']:
+               mainsAmps[0] = results.get('phase_currently_delivered_l1')*1000/230
+               mainsAmps[1] = results.get('phase_currently_delivered_l2')*1000/230
+               mainsAmps[2] = results.get('phase_currently_delivered_l3')*1000/230
+    #          phase_currently_delivered_l... (float) - Current electricity used by phase L... (in kW)
+        
+          else:
+            if debugLevel >= 1:
+                print('DSRM-reader Error: {}'.format(response.text))
+    '''
+          
+          
+
+    # I used the following Raspberrypi zero shield to measure the mains current:
+    # 3 current and 1 voltage adapter
+    # http://lechacal.com/wiki/index.php?title=RPIZ_CT3V1
+    # http://lechacalshop.com/gb/internetofthing/63-rpizct3v1.html
+        
+    # Serial Output: NodeID Realpower1 ApparentPower1 Irms1 Vrms1 PowerFactor1 Realpower2 ApparentPower2 Irms2 Vrms2 PowerFactor2 Realpower3 ApparentPower3 Irms3 Vrms3 PowerFactor3
+        
+    # mains[0] AC board NodeID
+    # mains[1] RealPower L1
+    # mains[2] ApparentPower L1
+    # >>> mains[3] Irms L1
+    # mains[4] Vrms L1
+    # mains[5] PowerFactor L1
+    # mains[6] RealPower L2
+    # mains[7] ApparentPower L2
+    # >>> mains[8] Irms L2
+    # mains[9] Vrms L2
+    # mains[10] PowerFactor L2
+    # mains[11] RealPower L3
+    # mains[12] ApparentPower L3
+    # >>> mains[13] Irms L3
+    # mains[14] Vrms L3
+    # mains[15] PowerFactor L3
+
+        
+    del mains[:]
+    import serial
+    
+    serMains = serial.Serial(CurrentMeasureSerialAdapter, 38400)
+
+    try:
+        while 1:
+             # Read one line from the serial buffer
+             line = serMains.readline()
+
+             # Remove the trailing carriage return line feed
+             line = line[:-2]
+
+             # Split the string at each space and create a list of the data
+             mains = line.split(' ')
+                       
+    except KeyboardInterrupt:
+           serMains.close()
+           print(time_now() +
+              " ERROR: No serial connection to current measure print! "
+    
+    if mains:
+      # We're only interested in the three current measurements
+      # put the L1, L2 & L3 Amps in an array
+      mainsAmps[0] = mains[3]
+      mainsAmps[1] = mains[8]
+      mainsAmps[2] = mains[13]
+
+      # Define how many samples are taken to calculate an average
+      # A small current spike should not trigger the main fuse.
+      # 1,1 x In for one hour // 1,5 x In for 10 min // 2 x In for 1 min // 3 x In for 10s // 10 x In for 0.1s
+      mainsSampleCount = 4
+
+      # find phase with highest current which is the limit for all phases and insert at beginning of samples list
+      mainsSample.insert(0, max(mainsAmps))
+
+      # remove oldest value in list (slice samples list to mainsSampleCount size)
+      mainsSample = mainsSample[:mainsSampleCount]
+            
+      # calculate average of the samples
+      mainsAvg = sum(mainsSample) / len(mainsSample) 
+        
+        
+      if(debugLevel >= 2):
+          print(time_now() +
+            " Amps L1 " + str(mainsAmps[0]) +
+            " Amps L2 " + str(mainsAmps[1]) +
+            " Amps L3 " + str(mainsAmps[2]) +
+            " last mains Sample " + str(mainsSample[0]) +
+            " mains Amps Avg " + str(mainsAmpsAvg)
+                  
+      # calculate left over amps for all TWCs
+      loadBalancingAmpsAllTWCs = maxAmpsMains - mainsAmpsAvg + total_amps_actual_all_twcs()
+            
+      if(maxAmpsToDivideAmongSlaves > loadBalancingAmpsAllTWCs):
+          # Never tell the slaves to draw more amps than the main fuse can handle.
+          maxAmpsToDivideAmongSlaves = loadBalancingAmpsAllTWCs
+          if(debugLevel >= 1):
+              print(time_now() + 
+                " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
+                " limited by loadBalancingAmpsAllTWCs " + str(loadBalancingAmpsAllTWCs))
+        
+
+    else:
+        print(time_now() +
+        " ERROR: Can't read mains current measurement "
+        del mainsSample[:]
+        maxAmpsToDivideAmongSlaves = 0
+
 #
 # End functions
 #
@@ -1893,8 +2031,7 @@ class TWCSlave:
                maxAmpsToDivideAmongSlaves, wiringMaxAmpsAllTWCs, \
                timeLastGreenEnergyCheck, greenEnergyAmpsOffset, \
                slaveTWCRoundRobin, spikeAmpsToCancel6ALimit, \
-               chargeNowAmps, chargeNowTimeEnd, minAmpsPerTWC, \
-               maxAmpsMains, CurrentMeasureSerialAdapter
+               chargeNowAmps, chargeNowTimeEnd, minAmpsPerTWC
 
         now = time.time()
         self.timeLastRx = now
@@ -2019,134 +2156,10 @@ class TWCSlave:
                     " > wiringMaxAmpsAllTWCs " + str(wiringMaxAmpsAllTWCs) +
                     ".\nSee notes above wiringMaxAmpsAllTWCs in the 'Configuration parameters' section.")
             maxAmpsToDivideAmongSlaves = wiringMaxAmpsAllTWCs
-
-            
-        
-        
-        # I used the following Raspberrypi zero shield to measure the mains current:
-        # 3 current and 1 voltage adapter
-        # http://lechacal.com/wiki/index.php?title=RPIZ_CT3V1
-        # http://lechacalshop.com/gb/internetofthing/63-rpizct3v1.html
-        
-        # Serial Output: NodeID Realpower1 ApparentPower1 Irms1 Vrms1 PowerFactor1 Realpower2 ApparentPower2 Irms2 Vrms2 PowerFactor2 Realpower3 ApparentPower3 Irms3 Vrms3 PowerFactor3
-        
-        # mains[0] AC board NodeID
-        # mains[1] RealPower L1
-        # mains[2] ApparentPower L1
-         # mains[3] Irms L1
-        # mains[4] Vrms L1
-        # mains[5] PowerFactor L1
-        # mains[6] RealPower L2
-        # mains[7] ApparentPower L2
-         # mains[8] Irms L2
-        # mains[9] Vrms L2
-        # mains[10] PowerFactor L2
-        # mains[11] RealPower L3
-        # mains[12] ApparentPower L3
-         # mains[13] Irms L3
-        # mains[14] Vrms L3
-        # mains[15] PowerFactor L3
-
-        
-    
-         import serial
-            
-            ser = serial.Serial(CurrentMeasureSerialAdapter, 38400)
-
-             try:
-                 while 1:
-                     # Read one line from the serial buffer
-                     line = ser.readline()
-
-                     # Remove the trailing carriage return line feed
-                     line = line[:-2]
-
-                     # Split the string at each space and create a list of the data
-                     mains = line.split(' ')
-                       
-         except KeyboardInterrupt:
-         ser.close()
-        
-        # We're only interested in the three current measurements
-        # put the L1, L2 & L3 Amps in an array
-        mainsAmps[0] = mains[3]
-        mainsAmps[1] = mains[8]
-        mainsAmps[2] = mains[13]
-
-        
-        '''
-        # If you want to use the dutch smart meter to read the AC current you could try DSRM-reader for RaspberryPi
-        # It has the following RESTful API.
-        # documented here: https://dsmr-reader.readthedocs.io/en/latest/api.html#example-2-fetch-latest-reading
-        # Requirements:
-        #   Hardware: RaspberryPi 3
-        #   OS: Raspbian OS
-        #   Python: 3.5+
-        #   Database: PostgreSQL 9+
-        #   SD disk space: 1+ GB
-        #   P1 telegram cable
-        
-        # Request power with DSRM-reader API:
-        import requests
-        import json
-
-        response = requests.get(
-            'http://YOUR-DSMR-URL/api/v2/datalogger/dsmrreading?ordering=-timestamp&limit=1',
-            headers={'X-AUTHKEY': 'YOUR-API-KEY'},
-        )
-        
-        if response and response.status_code == 200:
-            json_data = response.json()
-            if json_data and 'results' in json_data:
-                if 'phase_currently_delivered_l1' in json_data['results']:
-                   mainsAmps[0] = results.get('phase_currently_delivered_l1')*1000/230
-                   mainsAmps[1] = results.get('phase_currently_delivered_l2')*1000/230
-                   mainsAmps[2] = results.get('phase_currently_delivered_l3')*1000/230
-        #          phase_currently_delivered_l... (float) - Current electricity used by phase L... (in kW)
-        
-        else:
-            if debugLevel >= 1:
-                print('DSRM-reader Error: {}'.format(response.text))
-        '''
-        
-        
-        # Define how many samples are taken to calculate an average
-        # A small current spike should not trigger the main fuse.
-        # 1,1 x In for one hour // 1,5 x In for 10 min // 2 x In for 1 min // 3 x In for 10s // 10 x In for 0.1s
-        mainsSampleCount = 4
-
-        # find phase with highest current which is the limit for all phases and insert at beginning of samples list
-        mainsSample.insert(0, max(mainsAmps))
-
-        # remove oldest value in list (slice samples list to mainsSampleCount size)
-        mainsSample = mainsSample[:mainsSampleCount]
-            
-        # calculate average of the samples
-        mainsAvg = sum(mainsSample) / len(mainsSample) 
-        
-        
-        if(debugLevel >= 1):
-            print(time_now() +
-                " Amps L1 " + str(mainsAmps[0]) +
-                " Amps L2 " + str(mainsAmps[1]) +
-                " Amps L3 " + str(mainsAmps[2]) +
-                " last mains Sample " + str(mainsSample[0]) +
-                " mains Amps Avg " + str(mainsAmpsAvg)
-                  
-        # calculate left over amps for all TWCs
-        loadBalancingAmpsAllTWCs = maxAmpsMains - mainsAmpsAvg + total_amps_actual_all_twcs()
-            
-        if(maxAmpsToDivideAmongSlaves > loadBalancingAmpsAllTWCs):
-            # Never tell the slaves to draw more amps than the main fuse can handle.
-            if(debugLevel >= 1):
-                print(time_now() + 
-                    " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
-                    " limited by loadBalancingAmpsAllTWCs " + str(loadBalancingAmpsAllTWCs))
-            maxAmpsToDivideAmongSlaves = loadBalancingAmpsAllTWCs
-                  
-                  
-
-            
+                    
+        #Check how many amps are measured at the main house fuse to reduce charging current if necessary
+        check_main_fuse_current()
+         
             
         # Determine how many cars are charging and how many amps they're using
         numCarsCharging = 1

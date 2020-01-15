@@ -2114,16 +2114,12 @@ class TWCSlave:
         # A small current spike should not trigger the main fuse.
         # 1,1 x In for one hour // 1,5 x In for 10 min // 2 x In for 1 min // 3 x In for 10s // 10 x In for 0.1s
         mainsSampleCount = 4
-        
-        # shift samples array to the right
-        for i in range(mainsSampleCount -1, -1, -1):    
-            mainsSample[i] = mainsSample[i-1]
-          
-        # remove last value from samples list
-        mainsSample = mainsSample[:mainsSampleCount]
-        
+
         # find phase with highest current which is the limit for all phases and insert at beginning of samples list
         mainsSample.insert(0, max(mainsAmps))
+
+        # remove oldest value in list (slice samples list to mainsSampleCount size)
+        mainsSample = mainsSample[:mainsSampleCount]
             
         # calculate average of the samples
         mainsAvg = sum(mainsSample) / len(mainsSample) 

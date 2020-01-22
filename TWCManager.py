@@ -275,7 +275,7 @@ maxAmpsMains = 22
 
 # if the current measure shield is on the same raspberry pi as the TWCmanager '/dev/serial0' should work
 # if a Raspberey pi remote server with ser2net and current measure shield is used we need a virtual TTY poert '/dev/ttyV0'
-CurrentMeasureSerialAdapter = '/dev/ttyV0'
+CurrentMeasureSerialAdapter = "/dev/ttyV0"
           
     # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
     # run sudo raspi-config 
@@ -309,7 +309,7 @@ CurrentMeasureSerialAdapter = '/dev/ttyV0'
    # and let socat start at boot
     # sudo nano /etc/rc.local
    # add the following line bevore exit 0:
-    # socat pty,link=$HOME/dev/ttyV0,waitslave tcp:192.168.0.67:2000$
+    # socat pty,link=$HOME/dev/ttyV0,waitslave tcp:192.168.0.67:2000
    # sudo reboot
             
 
@@ -1440,9 +1440,7 @@ def check_main_fuse_current():
   
     
     
-    mains = []
-    #del mains[:]
-    mainsAmps = []
+    mainsAmps = [0] * 3
     
     import serial
     
@@ -1467,6 +1465,8 @@ def check_main_fuse_current():
         mainsAmps[0] = mains[3]
         mainsAmps[1] = mains[8]
         mainsAmps[2] = mains[13]
+        
+        del mains[:] # delete the mains after we used the values we need
 
         # Define how many samples are taken to calculate an average
         # A small current spike should not trigger the main fuse.

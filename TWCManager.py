@@ -2164,7 +2164,7 @@ class TWCSlave:
             maxAmpsToDivideAmongSlaves = wiringMaxAmpsAllTWCs
                     
         #Check how many amps are measured at the main house fuse to reduce charging current if necessary
-        check_main_fuse_current()
+        #check_main_fuse_current()
          
             
         # Determine how many cars are charging and how many amps they're using

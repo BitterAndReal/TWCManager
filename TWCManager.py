@@ -275,7 +275,7 @@ maxAmpsMains = 22
 
 # if the current measure shield is on the same raspberry pi as the TWCmanager '/dev/serial0' should work
 # if a Raspberey pi remote server with ser2net and current measure shield is used we need a virtual TTY poert '/dev/ttyV0'
-CurrentMeasureSerialAdapter = "/dev/ttyV0"
+CurrentMeasureSerialAdapter = '/dev/ttyV0'
           
     # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
     # run sudo raspi-config 
@@ -1475,7 +1475,7 @@ def check_main_fuse_current():
 
         # find phase with highest current which is the limit for all phases and insert at beginning of samples list
         if not(mainsSample):
-            mainsSample = []
+            mainsSample = [0] * mainsSampleCount
         mainsSample.insert(0, max(mainsAmps))
 
         # remove oldest value in list (slice samples list to mainsSampleCount size)

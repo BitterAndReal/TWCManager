@@ -305,11 +305,11 @@ CurrentMeasureSerialAdapter = '/dev/ttyV0'
             
  # and the pi with TWCmanager (Client) using socat to connect a virtual TTY to the remote serial port
    # instal socat with:
-    # git clone -b master --single-branch https://github.com/craSH/socat
+   # $git clone -b master --single-branch https://github.com/craSH/socat
    # and let socat start at boot
-    # sudo nano /etc/rc.local
+   # $sudo nano /etc/rc.local
    # add the following line bevore exit 0:
-    # socat pty,link=$HOME/dev/ttyV0,waitslave tcp:192.168.0.67:2000
+     # socat pty,link=$HOME/dev/ttyV0,waitslave tcp:192.168.0.67:2000
    # sudo reboot
             
 
@@ -1294,6 +1294,8 @@ def background_tasks_thread():
             car_api_available(task['email'], task['password'])
         elif(task['cmd'] == 'checkGreenEnergy'):
             check_green_energy()
+        #elif(task['cmd'] == 'checkMainFuseCurrent'):
+        #    check_main_fuse_current()
 
         # Delete task['cmd'] from backgroundTasksCmds such that
         # queue_background_task() can queue another task['cmd'] in the future.
@@ -1368,11 +1370,12 @@ def check_green_energy():
             str(greenEnergyData))
 
 
+    #Check how many amps are measured at the main house fuse to reduce charging current if necessary    
 def check_main_fuse_current():
-    global debugLevel, maxAmpsToDivideAmongSlaves, \
-           minAmpsPerTWC, backgroundTasksLock, \
-           CurrentMeasureSerialAdapter, maxAmpsMains
-          
+    global debugLevel, backgroundTasksLock, \
+           CurrentMeasureSerialAdapter, maxAmpsMains, \
+           leftOverAmpsForAllTWCs
+    
         
     '''
     # If you want to use the dutch smart meter to read the AC current you could try DSRM-reader for RaspberryPi
@@ -1421,6 +1424,7 @@ def check_main_fuse_current():
         
     # Serial Output: NodeID Realpower1 ApparentPower1 Irms1 Vrms1 PowerFactor1 Realpower2 ApparentPower2 Irms2 Vrms2 PowerFactor2 Realpower3 ApparentPower3 Irms3 Vrms3 PowerFactor3
         
+    # >> this serial message gets split into this list <<
     # mains[0] AC board NodeID
     # mains[1] RealPower L1
     # mains[2] ApparentPower L1
@@ -1439,12 +1443,14 @@ def check_main_fuse_current():
     # mains[15] PowerFactor L3
   
     
-    
+    # create empty list
     mainsAmps = [0] * 3
     
     import serial
     
-    serMains = serial.Serial(CurrentMeasureSerialAdapter, 38400, timeout=1)
+    # '/dev/ttyV0'
+    # CurrentMeasureSerialAdapter
+    serMains = serial.Serial('/dev/ttyV0', 38400, timeout=1)
 
     while True:
         # Read one line from the serial buffer
@@ -1473,10 +1479,12 @@ def check_main_fuse_current():
         # 1,1 x In for one hour // 1,5 x In for 10 min // 2 x In for 1 min // 3 x In for 10s // 10 x In for 0.1s
         mainsSampleCount = 4
 
-        # find phase with highest current which is the limit for all phases and insert at beginning of samples list
+        # create mainsSample list if it does not exist (don't know if this is necessary?)
         if not(mainsSample):
-            mainsSample = [0] * mainsSampleCount
-        mainsSample.insert(0, max(mainsAmps))
+            mainsSample = []
+        
+        # find phase with highest current which is the limit for all phases and insert at beginning of samples list
+        mainsSample.append(max(mainsAmps))
 
         # remove oldest value in list (slice samples list to mainsSampleCount size)
         mainsSample = mainsSample[:mainsSampleCount]
@@ -1495,21 +1503,18 @@ def check_main_fuse_current():
                   
         # calculate left over amps for all TWCs
         leftOverAmpsForAllTWCs = maxAmpsMains - mainsAmpsAvg + total_amps_actual_all_twcs()
-            
-        if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):
-            # Never tell the slaves to draw more amps than the main fuse can handle.
-            maxAmpsToDivideAmongSlaves = leftOverAmpsForAllTWCs
-            if(debugLevel >= 1):
-                print(time_now() + 
-                  " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
-                  " limited by leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
         
 
     else:
         print(time_now() +
-        " ERROR: Can't read serial mains current sensor ")
+        " ERROR: Can't connect to serial mains current sensor! ")
+
         del mainsSample[:]
-        maxAmpsToDivideAmongSlaves = 0
+        del mains[:]
+          
+        leftOverAmpsForAllTWCs = 0
+
+
 
 #
 # End functions
@@ -2162,10 +2167,24 @@ class TWCSlave:
                     " > wiringMaxAmpsAllTWCs " + str(wiringMaxAmpsAllTWCs) +
                     ".\nSee notes above wiringMaxAmpsAllTWCs in the 'Configuration parameters' section.")
             maxAmpsToDivideAmongSlaves = wiringMaxAmpsAllTWCs
-                    
-        #Check how many amps are measured at the main house fuse to reduce charging current if necessary
-        #check_main_fuse_current()
-         
+            
+#          
+        # Check how many amps are measured at the main house fuse to reduce charging current 
+        # if necessary to protect the main fuses.
+        # run function directly >>>
+        check_main_fuse_current()
+        # or maybe run function in background task >>>
+        # queue_background_task({'cmd':'checkMainFuseCurrent') 
+
+        # leftOverAmpsForAllTWCs is calculated by check_main_fuse_current() in the background.
+        if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):
+            # Never tell the slaves to draw more amps than the main fuse can handle.
+            maxAmpsToDivideAmongSlaves = leftOverAmpsForAllTWCs
+            if(debugLevel >= 1):
+                print(time_now() + 
+                  " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
+                  " limited by leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
+        
             
         # Determine how many cars are charging and how many amps they're using
         numCarsCharging = 1

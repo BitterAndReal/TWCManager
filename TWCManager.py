@@ -1294,8 +1294,8 @@ def background_tasks_thread():
             car_api_available(task['email'], task['password'])
         elif(task['cmd'] == 'checkGreenEnergy'):
             check_green_energy()
-        #elif(task['cmd'] == 'checkMainFuseCurrent'):
-        #    check_main_fuse_current()
+        elif(task['cmd'] == 'checkMainFuseCurrent'):
+            check_main_fuse_current()
 
         # Delete task['cmd'] from backgroundTasksCmds such that
         # queue_background_task() can queue another task['cmd'] in the future.
@@ -1364,6 +1364,7 @@ def check_green_energy():
                  minAmpsPerTWC))
 
         backgroundTasksLock.release()
+        
     else:
         print(time_now() +
             " ERROR: Can't determine current solar generation from:\n" +
@@ -1374,9 +1375,9 @@ def check_green_energy():
 def check_main_fuse_current():
     global debugLevel, backgroundTasksLock, \
            CurrentMeasureSerialAdapter, maxAmpsMains, \
-           leftOverAmpsForAllTWCs
+           leftOverAmpsForAllTWCs, avgMainsAmps
     
-        
+
     '''
     # If you want to use the dutch smart meter to read the AC current you could try DSRM-reader for RaspberryPi
     # It has the following RESTful API.
@@ -1402,9 +1403,9 @@ def check_main_fuse_current():
         json_data = response.json()
         if json_data and 'results' in json_data:
             if 'phase_currently_delivered_l1' in json_data['results']:
-               mainsAmps[0] = results.get('phase_currently_delivered_l1')*1000/230
-               mainsAmps[1] = results.get('phase_currently_delivered_l2')*1000/230
-               mainsAmps[2] = results.get('phase_currently_delivered_l3')*1000/230
+               MainsAmpsPhases[0] = results.get('phase_currently_delivered_l1')*1000/230
+               MainsAmpsPhases[1] = results.get('phase_currently_delivered_l2')*1000/230
+               MainsAmpsPhases[2] = results.get('phase_currently_delivered_l3')*1000/230
     #          phase_currently_delivered_l... (float) - Current electricity used by phase L... (in kW)
         
           else:
@@ -1444,7 +1445,7 @@ def check_main_fuse_current():
   
     
     # create empty list
-    mainsAmps = [0] * 3
+    MainsAmpsPhases = [0] * 3
     
     import serial
     
@@ -1468,9 +1469,10 @@ def check_main_fuse_current():
     if(len(mains) >= 15):
         # We're only interested in the three current measurements
         # put the L1, L2 & L3 Amps in an array
-        mainsAmps[0] = mains[3]
-        mainsAmps[1] = mains[8]
-        mainsAmps[2] = mains[13]
+        # consumed power is expected to be a positive value!
+        MainsAmpsPhases[0] = mains[3]
+        MainsAmpsPhases[1] = mains[8]
+        MainsAmpsPhases[2] = mains[13]
         
         del mains[:] # delete the mains after we used the values we need
 
@@ -1479,39 +1481,60 @@ def check_main_fuse_current():
         # 1,1 x In for one hour // 1,5 x In for 10 min // 2 x In for 1 min // 3 x In for 10s // 10 x In for 0.1s
         mainsSampleCount = 4
 
-        # create mainsSample list if it does not exist (don't know if this is necessary?)
-        if not(mainsSample):
-            mainsSample = []
+        # create maxMainsSample list if it does not exist (don't know if this is necessary?)
+        if not(maxMainsSample):
+            maxMainsSample = []
         
         # find phase with highest current which is the limit for all phases and insert at beginning of samples list
-        mainsSample.append(max(mainsAmps))
+        maxMainsSample.append(max(MainsAmpsPhases))
 
         # remove oldest value in list (slice samples list to mainsSampleCount size)
-        mainsSample = mainsSample[:mainsSampleCount]
+        maxMainsSample = maxMainsSample[:mainsSampleCount]
             
         # calculate average of the samples
-        mainsAmpsAvg = sum(mainsSample) / len(mainsSample) 
+        maxMainsAmps = sum(maxMainsSample) / len(maxMainsSample) 
+        
+        
+        
+        # avgMainsAmps can be used instead of solar generation api
+        
+        # create avgMainsSample list if it does not exist (don't know if this is necessary?)
+        if not(avgMainsSample):
+            avgMainsSample = []
+        
+        # calculate average of all phases and insert at beginning of samples list
+        avgMainsSample.append(sum(MainsAmpsPhases) / len(MainsAmpsPhases))
+
+        # remove oldest value in list (slice samples list to mainsSampleCount size)
+        avgMainsSample = avgMainsSample[:mainsSampleCount]
+            
+        # calculate average of the samples
+        avgMainsAmps = sum(avgMainsSample) / len(avgMainsSample) 
+        
+        
         
         
         if(debugLevel >= 8):
             print(time_now() +
-              " Amps L1 " + str(mainsAmps[0]) +
-              " Amps L2 " + str(mainsAmps[1]) +
-              " Amps L3 " + str(mainsAmps[2]) +
-              " last mains Sample " + str(mainsSample[0]) +
-              " mains Amps Avg " + str(mainsAmpsAvg))
+              " Amps L1 " + str(MainsAmpsPhases[0]) +
+              " Amps L2 " + str(MainsAmpsPhases[1]) +
+              " Amps L3 " + str(MainsAmpsPhases[2]) +
+              " last mains Sample " + str(maxMainsSample[0]) +
+              " max mains Amps Avg " + str(maxMainsAmps))
                   
         # calculate left over amps for all TWCs
-        leftOverAmpsForAllTWCs = maxAmpsMains - mainsAmpsAvg + total_amps_actual_all_twcs()
+        leftOverAmpsForAllTWCs = maxAmpsMains - maxMainsAmps + total_amps_actual_all_twcs()
         
 
     else:
         print(time_now() +
         " ERROR: Can't connect to serial mains current sensor! ")
 
-        del mainsSample[:]
+        del maxMainsSample[:]
+        del avgMainsSample[:]
         del mains[:]
           
+        avgMainsAmps = 0
         leftOverAmpsForAllTWCs = 0
 
 
@@ -2042,7 +2065,8 @@ class TWCSlave:
                maxAmpsToDivideAmongSlaves, wiringMaxAmpsAllTWCs, \
                timeLastGreenEnergyCheck, greenEnergyAmpsOffset, \
                slaveTWCRoundRobin, spikeAmpsToCancel6ALimit, \
-               chargeNowAmps, chargeNowTimeEnd, minAmpsPerTWC
+               chargeNowAmps, chargeNowTimeEnd, minAmpsPerTWC, \
+               leftOverAmpsForAllTWCs
 
         now = time.time()
         self.timeLastRx = now
@@ -2151,7 +2175,12 @@ class TWCSlave:
                 if(ltNow.tm_hour < 6 or ltNow.tm_hour >= 20):
                     maxAmpsToDivideAmongSlaves = 0
                 else:
-                    queue_background_task({'cmd':'checkGreenEnergy'})
+                    # we use the current at the main fuse insted of the solar generation api checkGreenEnergy uses
+                    #queue_background_task({'cmd':'checkGreenEnergy'})
+                    # avgMainsAmps is an average of all phases
+                    # one phase can actually export energy while an other imports from the grid
+                    if(avgMainsAmps < -1):
+                        maxAmpsToDivideAmongSlaves = 0 - avgMainsAmps
 
         # Use backgroundTasksLock to prevent the background thread from changing
         # the value of maxAmpsToDivideAmongSlaves after we've checked the value
@@ -2171,10 +2200,10 @@ class TWCSlave:
 #          
         # Check how many amps are measured at the main house fuse to reduce charging current 
         # if necessary to protect the main fuses.
-        # run function directly >>>
-        check_main_fuse_current()
-        # or maybe run function in background task >>>
-        # queue_background_task({'cmd':'checkMainFuseCurrent') 
+
+        # run check_main_fuse_current function in background task >>>
+        queue_background_task({'cmd':'checkMainFuseCurrent'})
+        # or maybe run function directly >>> check_main_fuse_current()
 
         # leftOverAmpsForAllTWCs is calculated by check_main_fuse_current() in the background.
         if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):

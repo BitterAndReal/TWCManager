@@ -192,7 +192,7 @@ wiringMaxAmpsPerTWC = 20
 # can't reach that rate, so charging as fast as your wiring supports is best
 # from that standpoint.  It's not clear how much damage charging at slower
 # rates really does.
-minAmpsPerTWC = 3
+minAmpsPerTWC = 5
 
 # When you have more than one vehicle associated with the Tesla car API and
 # onlyChargeMultiCarsAtHome = True, cars will only be controlled by the API when
@@ -229,7 +229,7 @@ greenEnergyAmpsOffset = 0
 # 9 includes raw RS-485 messages transmitted and received (2-3 per sec)
 # 10 is all info.
 # 11 is more than all info.  ;)
-debugLevel = 8
+debugLevel = 10
 
 # Choose whether to display milliseconds after time on each line of debug info.
 displayMilliseconds = False

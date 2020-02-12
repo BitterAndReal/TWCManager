@@ -1255,10 +1255,10 @@ def background_tasks_thread():
         elif(task['cmd'] == 'carApiEmailPassword'):
             carApiLastErrorTime = 0
             car_api_available(task['email'], task['password'])
-        elif(task['cmd'] == 'checkGreenEnergy'):
+        elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
             check_green_energy()
-        elif(task['cmd'] == 'checkMainFuseCurrent'):
-            check_main_fuse_current()
+        elif(task['cmd'] == 'checkUtilityFuseCurrent'):
+            check_utility_fuse_current()
 
         # Delete task['cmd'] from backgroundTasksCmds such that
         # queue_background_task() can queue another task['cmd'] in the future.
@@ -1269,6 +1269,7 @@ def background_tasks_thread():
         # in the queue are done.
         backgroundTasksQueue.task_done()
 
+# not used in this fork
 def check_green_energy():
     global debugLevel, maxAmpsToDivideAmongSlaves, greenEnergyAmpsOffset, \
            minAmpsPerTWC, backgroundTasksLock
@@ -1336,7 +1337,7 @@ def check_green_energy():
 
     # Check how many amps are measured at the utility mains to protect the main fuse of your house.
     # We want to reduce the charging current if we are using more than the main fuse rating.
-def check_main_fuse_current():
+def check_utility_fuse_current():
     global debugLevel, backgroundTasksLock, maxAmpsMains, \
            leftOverAmpsForAllTWCs, avgMainsAmps
     
@@ -1451,7 +1452,8 @@ def check_main_fuse_current():
     import serial
     
     # if the current measure shield is on the same raspberry pi as the TWCmanager '/dev/serial0' should work
-    # if a Raspberey pi remote server with ser2net and current measure shield is used we need a virtual TTY port '/dev/ttyV0'
+    # if a Raspberey pi remote server with ser2net and current measure shield is used 
+    # we need a virtual port from the socat putty '/dev/ttyV0'
     serMains = serial.Serial('/dev/ttyV0', 38400, timeout=1)
 
     while True:
@@ -1469,7 +1471,7 @@ def check_main_fuse_current():
     
     if(len(mains) >= 15):
         # We're only interested in the three current measurements
-        # put the L1, L2 & L3 Amps in an array
+        # put the L1, L2 & L3 Amps in a list
         # consumed power is expected to be a positive value!
         MainsAmpsPhases[0] = mains[3]
         MainsAmpsPhases[1] = mains[8]
@@ -2176,10 +2178,12 @@ class TWCSlave:
                 if(ltNow.tm_hour < 6 or ltNow.tm_hour >= 20):
                     maxAmpsToDivideAmongSlaves = 0
                 else:
-                    # we use the current at the main fuse insted of the solar generation api checkGreenEnergy uses
+                    # we use the current at the utility main fuse insted of the solar generation api checkGreenEnergy uses
                     #queue_background_task({'cmd':'checkGreenEnergy'})
-                    # avgMainsAmps is an average of all phases
-                    # one phase can actually export energy while an other imports from the grid
+                        
+                    # avgMainsAmps is an average of all 3 phases
+                    # One phase could actually export energy while an other imports from the grid.
+                    # But we just use an average because we cant control the charging current for each phase.
                     if(avgMainsAmps < -1):
                         maxAmpsToDivideAmongSlaves = 0 - avgMainsAmps
 
@@ -2199,12 +2203,12 @@ class TWCSlave:
             maxAmpsToDivideAmongSlaves = wiringMaxAmpsAllTWCs
             
 #          
-        # Check how many amps are measured at the main house fuse to reduce charging current 
+        # Check how many amps are measured at the utility mains fuse to reduce charging current 
         # if necessary to protect the main fuses.
 
-        # run check_main_fuse_current function in background task >>>
-        queue_background_task({'cmd':'checkMainFuseCurrent'})
-        # or maybe run function directly >>> check_main_fuse_current()
+        # run check_utility_fuse_current function in background task >>>
+        queue_background_task({'cmd':'checkUtilityFuseCurrent'})
+        # or maybe run function directly >>> check_utility_fuse_current()
 
         # leftOverAmpsForAllTWCs is calculated by check_main_fuse_current() in the background.
         if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):

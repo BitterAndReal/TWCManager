@@ -192,7 +192,7 @@ wiringMaxAmpsPerTWC = 20
 # can't reach that rate, so charging as fast as your wiring supports is best
 # from that standpoint.  It's not clear how much damage charging at slower
 # rates really does.
-minAmpsPerTWC = 5
+minAmpsPerTWC = 6
 
 # When you have more than one vehicle associated with the Tesla car API and
 # onlyChargeMultiCarsAtHome = True, cars will only be controlled by the API when
@@ -207,6 +207,8 @@ minAmpsPerTWC = 5
 # a car not at home being stopped from charging by the API.
 onlyChargeMultiCarsAtHome = True
 
+# greenEnergyAmpsOffset is not used in this fork because we measure live energy 
+# at the utility meter where it enters / leves the house and not at the solar inverter!
 # After determining how much green energy is available for charging, we add
 # greenEnergyAmpsOffset to the value. This is most often given a negative value
 # equal to the average amount of power consumed by everything other than car
@@ -220,7 +222,7 @@ onlyChargeMultiCarsAtHome = True
 # North American 240V grid. In other words, during car charging, you want your
 # utility meter to show a value close to 0kW meaning no energy is being sent to
 # or from the grid.
-greenEnergyAmpsOffset = 0
+# greenEnergyAmpsOffset = 0
 
 # Choose how much debugging info to output.
 # 0 is no output other than errors.
@@ -265,52 +267,13 @@ masterSign = bytearray(b'\x77')
 slaveSign = bytearray(b'\x77')
 
 
-# set maxAmpsMains to 90% of the main power connection fuse of your house
+# set maxAmpsMains to 90% of the utility mains fuse of your house
 # the most common main fuse values in the Netherlands are: 
 #   single phase 35amps = 28
 #   or 3 phase 25amps = 22
 maxAmpsMains = 22
 
 
-
-# if the current measure shield is on the same raspberry pi as the TWCmanager '/dev/serial0' should work
-# if a Raspberey pi remote server with ser2net and current measure shield is used we need a virtual TTY poert '/dev/ttyV0'
-CurrentMeasureSerialAdapter = '/dev/ttyV0'
-          
-    # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
-    # run sudo raspi-config 
-    # Select Interfacing Options / Serial 
-    # then specify if you want a Serial console (no) 
-    # then if you want the Serial Port hardware enabled (yes). 
-    # Then use /dev/serial0 in any code which accesses the Serial Port.
-    
-# if TWC and mains connection are far away from each other it is possible to use two raspberry pi connected to the same network
-# device with the current measure shield using ser2net with the following config:
-            
-    # sudo apt-get install ser2net
-    # sudo nano /etc/ser2net.conf
-    # add this line: 2000:raw:0:/dev/serial0:38400 8DATABITS NONE 1STOPBIT banner
-    # sudo /etc/init.d/ser2net restart
-
-   # And serial port needs to be enabled
-    # run sudo raspi-config 
-    # Select Interfacing Options / Serial 
-    # then specify if you want a Serial console (no) 
-    # then if you want the Serial Port hardware enabled (yes). 
-    # Then use /dev/serial0 in any code which accesses the Serial Port.
-
-    # sudo shutdown -r now
-            
- #####
-            
- # and the pi with TWCmanager (Client) using socat to connect a virtual TTY to the remote serial port
-   # instal socat with:
-   # $git clone -b master --single-branch https://github.com/craSH/socat
-   # and let socat start at boot
-   # $sudo nano /etc/rc.local
-   # add the following line bevore exit 0:
-     # socat pty,link=$HOME/dev/ttyV0,waitslave tcp:192.168.0.67:2000
-   # sudo reboot
             
 
 #
@@ -1371,24 +1334,25 @@ def check_green_energy():
             str(greenEnergyData))
 
 
-    #Check how many amps are measured at the main house fuse to reduce charging current if necessary    
+    # Check how many amps are measured at the utility mains to protect the main fuse of your house.
+    # We want to reduce the charging current if we are using more than the main fuse rating.
 def check_main_fuse_current():
-    global debugLevel, backgroundTasksLock, \
-           CurrentMeasureSerialAdapter, maxAmpsMains, \
+    global debugLevel, backgroundTasksLock, maxAmpsMains, \
            leftOverAmpsForAllTWCs, avgMainsAmps
     
 
     '''
-    # If you want to use the dutch smart meter to read the AC current you could try DSRM-reader for RaspberryPi
+    # If you want to use the dutch smart meter to read the AC current you could try DSMR-reader for RaspberryPi
     # It has the following RESTful API.
     # documented here: https://dsmr-reader.readthedocs.io/en/latest/api.html#example-2-fetch-latest-reading
     # Requirements:
+    #   Smart meter DSMR version: v2, v4 of v5
     #   Hardware: RaspberryPi 3
     #   OS: Raspbian OS
-    #   Python: 3.5+
+    #   Python: 3.6+
     #   Database: PostgreSQL 9+
-    #   SD disk space: 1+ GB
-    #   P1 telegram cable
+    #   SD disk space: 4+ GB
+    #   P1 telegram cable (RJ11 to USB)
         
     # Request power with DSRM-reader API:
     import requests
@@ -1415,17 +1379,54 @@ def check_main_fuse_current():
           
                 
 
-    # I used the following Raspberrypi zero shield to measure the mains current:
+    # I used the following Raspberrypi zero shield to measure the utility mains current:
     # 3 current and 1 voltage adapter
     # http://lechacal.com/wiki/index.php?title=RPIZ_CT3V1
     # http://lechacalshop.com/gb/internetofthing/63-rpizct3v1.html
     
-    # make sure you have python-serial package installed!
-    # $ sudo apt-get install python-serial
-        
+
+    # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
+      # run $ sudo raspi-config 
+      # Select Interfacing Options / Serial 
+      # then specify if you want a Serial console (no) 
+      # then if you want the Serial Port hardware enabled (yes). 
+      # Then use /dev/serial0 in any code which accesses the Serial Port.
+    
+    # if TWC and mains connection are far away from each other it is possible to use two 
+    # raspberry pi connected to the same network
+          
+    # The Pi with the current measure shield using ser2net with the following config:
+
+       # make sure you have python-serial package installed
+       # $ sudo apt-get install python-serial
+       # $ sudo apt-get install ser2net
+       # sudo nano /etc/ser2net.conf
+       # add this line: 2000:raw:0:/dev/serial0:38400 8DATABITS NONE 1STOPBIT banner
+       # sudo /etc/init.d/ser2net restart
+
+      # And serial port needs to be enabled
+       # run $ sudo raspi-config 
+       # Select Interfacing Options / Serial 
+       # then specify if you want a Serial console (no) 
+       # then if you want the Serial Port hardware enabled (yes). 
+       # Then use /dev/serial0 in any code which accesses the Serial Port.
+       # $ sudo shutdown -r now
+            
+            
+    # and the pi with TWCmanager (Client) using socat to connect a virtual TTY to the remote serial port
+      # instal socat with:
+      # $ git clone -b master --single-branch https://github.com/craSH/socat
+      # and we want socat to start a puty at boot
+      # $ sudo nano /etc/rc.local
+      # add the following line bevore we open TWCManager.py
+        # socat pty,link=$HOME/dev/ttyV0,waitslave tcp:192.168.0.67:2000
+      # $ sudo reboot
+    ##############################
+          
+          
     # Serial Output: NodeID Realpower1 ApparentPower1 Irms1 Vrms1 PowerFactor1 Realpower2 ApparentPower2 Irms2 Vrms2 PowerFactor2 Realpower3 ApparentPower3 Irms3 Vrms3 PowerFactor3
         
-    # >> this serial message gets split into this list <<
+    # >> serial message split into a list:
     # mains[0] AC board NodeID
     # mains[1] RealPower L1
     # mains[2] ApparentPower L1
@@ -1449,8 +1450,8 @@ def check_main_fuse_current():
     
     import serial
     
-    # '/dev/ttyV0'
-    # CurrentMeasureSerialAdapter
+    # if the current measure shield is on the same raspberry pi as the TWCmanager '/dev/serial0' should work
+    # if a Raspberey pi remote server with ser2net and current measure shield is used we need a virtual TTY port '/dev/ttyV0'
     serMains = serial.Serial('/dev/ttyV0', 38400, timeout=1)
 
     while True:
@@ -1528,7 +1529,7 @@ def check_main_fuse_current():
 
     else:
         print(time_now() +
-        " ERROR: Can't connect to serial mains current sensor! ")
+        " ERROR: Can't connect to utility mains current sensor! ")
 
         del maxMainsSample[:]
         del avgMainsSample[:]

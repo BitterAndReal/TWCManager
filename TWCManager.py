@@ -1258,8 +1258,8 @@ def background_tasks_thread():
             car_api_available(task['email'], task['password'])
         elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
             check_green_energy()
-        elif(task['cmd'] == 'checkUtilityFuseCurrent'):
-            check_utility_fuse_current()
+#       elif(task['cmd'] == 'checkUtilityFuseCurrent'):
+#            check_utility_fuse_current()
 
         # Delete task['cmd'] from backgroundTasksCmds such that
         # queue_background_task() can queue another task['cmd'] in the future.
@@ -1340,7 +1340,7 @@ def check_green_energy():
 def check_utility_fuse_current():
     global debugLevel, backgroundTasksLock, maxAmpsMains, \
            leftOverAmpsForAllTWCs, avgMainsAmps
-    
+
     # Check how many amps are measured at the utility mains to protect the main fuse of your house.
     # We want to reduce the charging current if we are using more than the main fuse rating.
 
@@ -1384,12 +1384,12 @@ def check_utility_fuse_current():
     # >>> mains[13] Irms L3
     # mains[14] Vrms L3
     # mains[15] PowerFactor L3
-  
-    
+
+
     # create empty list
     MainsAmpsPhases = [0] * 3
-    
-    
+
+
     # socket client
     # get data from the Raspberry pi running socket-server.py (the pi with the utility current measure print)
 
@@ -1417,7 +1417,7 @@ def check_utility_fuse_current():
         MainsAmpsPhases[0] = mains[3]
         MainsAmpsPhases[1] = mains[8]
         MainsAmpsPhases[2] = mains[13]
-        
+
         del mains[:] # delete the mains after we used the values we need
 
         # Define how many samples are taken to calculate an average
@@ -1428,36 +1428,35 @@ def check_utility_fuse_current():
         # create maxMainsSample list if it does not exist (don't know if this is necessary?)
         if not(maxMainsSample):
             maxMainsSample = []
-        
+
         # find phase with highest current which is the limit for all phases and insert at beginning of samples list
         maxMainsSample.append(max(MainsAmpsPhases))
 
         # remove oldest value in list (slice samples list to mainsSampleCount size)
         maxMainsSample = maxMainsSample[:mainsSampleCount]
-            
+
         # calculate average of the samples
         maxMainsAmps = sum(maxMainsSample) / len(maxMainsSample) 
-        
-        
-        
+
+
+
         # avgMainsAmps can be used instead of solar generation api
-        
+
         # create avgMainsSample list if it does not exist (don't know if this is necessary?)
         if not(avgMainsSample):
             avgMainsSample = []
-        
+
         # calculate average of all phases and insert at beginning of samples list
         avgMainsSample.append(sum(MainsAmpsPhases) / len(MainsAmpsPhases))
 
         # remove oldest value in list (slice samples list to mainsSampleCount size)
         avgMainsSample = avgMainsSample[:mainsSampleCount]
-            
+
         # calculate average of the samples
         avgMainsAmps = sum(avgMainsSample) / len(avgMainsSample) 
-        
-        
-        
-        
+
+
+
         if(debugLevel >= 8):
             print(time_now() +
               " Amps L1 " + str(MainsAmpsPhases[0]) +
@@ -1465,10 +1464,10 @@ def check_utility_fuse_current():
               " Amps L3 " + str(MainsAmpsPhases[2]) +
               " last mains Sample " + str(maxMainsSample[0]) +
               " max mains Amps Avg " + str(maxMainsAmps))
-                  
+
         # calculate left over amps for all TWCs
         leftOverAmpsForAllTWCs = maxAmpsMains - maxMainsAmps + total_amps_actual_all_twcs()
-        
+
 
     else:
         print(time_now() +
@@ -1477,7 +1476,7 @@ def check_utility_fuse_current():
         del maxMainsSample[:]
         del avgMainsSample[:]
         del mains[:]
-          
+
         avgMainsAmps = 0
         leftOverAmpsForAllTWCs = 0
 

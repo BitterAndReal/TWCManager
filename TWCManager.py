@@ -1258,7 +1258,7 @@ def background_tasks_thread():
         elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
             check_green_energy()
         elif(task['cmd'] == 'checkUtilityFuseCurrent'):
-            check_utility_fuse_current()
+            #check_utility_fuse_current()
 
         # Delete task['cmd'] from backgroundTasksCmds such that
         # queue_background_task() can queue another task['cmd'] in the future.

@@ -1258,8 +1258,8 @@ def background_tasks_thread():
             car_api_available(task['email'], task['password'])
         elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
             check_green_energy()
-#        elif(task['cmd'] == 'checkUtilityFuseCurrent'):
-#            check_utility_fuse_current()
+        elif(task['cmd'] == 'checkUtilityFuseCurrent'):
+            check_utility_fuse_current()
 
         # Delete task['cmd'] from backgroundTasksCmds such that
         # queue_background_task() can queue another task['cmd'] in the future.
@@ -2148,7 +2148,7 @@ class TWCSlave:
         # if necessary to protect the main fuses.
 
         # run check_utility_fuse_current function in background task >>>
-        queue_background_task({'cmd':'checkUtilityFuseCurrent'})
+#        queue_background_task({'cmd':'checkUtilityFuseCurrent'})
         # or maybe run function directly >>> check_utility_fuse_current()
 
         # leftOverAmpsForAllTWCs is calculated by check_main_fuse_current() in the background.

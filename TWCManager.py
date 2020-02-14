@@ -119,6 +119,7 @@ import sysv_ipc
 import json
 from datetime import datetime
 import threading
+import socket
 
 
 ##########################
@@ -1257,8 +1258,8 @@ def background_tasks_thread():
             car_api_available(task['email'], task['password'])
         elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
             check_green_energy()
-        elif(task['cmd'] == 'checkUtilityFuseCurrent'):
-            #check_utility_fuse_current()
+#        elif(task['cmd'] == 'checkUtilityFuseCurrent'):
+#            check_utility_fuse_current()
 
         # Delete task['cmd'] from backgroundTasksCmds such that
         # queue_background_task() can queue another task['cmd'] in the future.
@@ -1343,44 +1344,6 @@ def check_utility_fuse_current():
     # Check how many amps are measured at the utility mains to protect the main fuse of your house.
     # We want to reduce the charging current if we are using more than the main fuse rating.
 
-    '''
-    # If you want to use the dutch smart meter to read the AC current you could try DSMR-reader for RaspberryPi
-    # It has the following RESTful API.
-    # documented here: https://dsmr-reader.readthedocs.io/en/latest/api.html#example-2-fetch-latest-reading
-    # Requirements:
-    #   Smart meter DSMR version: v2, v4 of v5
-    #   Hardware: RaspberryPi 3
-    #   OS: Raspbian OS
-    #   Python: 3.6+
-    #   Database: PostgreSQL 9+
-    #   SD disk space: 4+ GB
-    #   P1 telegram cable (RJ11 to USB)
-        
-    # Request power with DSRM-reader API:
-    import requests
-    import json
-
-    response = requests.get(
-        'http://YOUR-DSMR-URL/api/v2/datalogger/dsmrreading?ordering=-timestamp&limit=1',
-        headers={'X-AUTHKEY': 'YOUR-API-KEY'},
-    )
-        
-    if response and response.status_code == 200:
-        json_data = response.json()
-        if json_data and 'results' in json_data:
-            if 'phase_currently_delivered_l1' in json_data['results']:
-               MainsAmpsPhases[0] = results.get('phase_currently_delivered_l1')*1000/230
-               MainsAmpsPhases[1] = results.get('phase_currently_delivered_l2')*1000/230
-               MainsAmpsPhases[2] = results.get('phase_currently_delivered_l3')*1000/230
-    #          phase_currently_delivered_l... (float) - Current electricity used by phase L... (in kW)
-        
-          else:
-            if debugLevel >= 1:
-                print('DSRM-reader Error: {}'.format(response.text))
-    '''
-          
-                
-
     # I used the following Raspberrypi zero shield to measure the utility mains current:
     # 3 current and 1 voltage adapter
     # http://lechacal.com/wiki/index.php?title=RPIZ_CT3V1
@@ -1429,14 +1392,14 @@ def check_utility_fuse_current():
     
     # socket client
     # get data from the Raspberry pi running socket-server.py (the pi with the utility current measure print)
-    import socket
 
     HOST = '192.168.0.67'  # The server's hostname or IP address
-    PORT = 8080            # The port used by the server
+    PORT = 65432           # The port used by the server
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(2)
         s.connect((HOST, PORT))
-        s.sendall(b'client asking for data')
+        s.sendall('client asking for data')
         line = s.recv(1024)
 
         if(debugLevel >= 10):

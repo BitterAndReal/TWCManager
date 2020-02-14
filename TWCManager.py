@@ -1336,7 +1336,7 @@ def check_green_energy():
             str(greenEnergyData))
 
 
-
+'''
 def check_utility_fuse_current():
     global debugLevel, backgroundTasksLock, maxAmpsMains, \
            leftOverAmpsForAllTWCs, avgMainsAmps
@@ -1400,7 +1400,7 @@ def check_utility_fuse_current():
         s.settimeout(2)
         s.connect((HOST, PORT))
         s.sendall('client asking for data')
-        line = s.recv(1024)
+        line = s.recv(1024).decode()
 
         if(debugLevel >= 10):
             print(time_now() +
@@ -1479,7 +1479,7 @@ def check_utility_fuse_current():
 
         avgMainsAmps = 0
         leftOverAmpsForAllTWCs = 0
-
+'''
 
 
 #
@@ -2009,7 +2009,7 @@ class TWCSlave:
                timeLastGreenEnergyCheck, greenEnergyAmpsOffset, \
                slaveTWCRoundRobin, spikeAmpsToCancel6ALimit, \
                chargeNowAmps, chargeNowTimeEnd, minAmpsPerTWC, \
-               leftOverAmpsForAllTWCs
+               leftOverAmpsForAllTWCs, avgMainsAmps
 
         now = time.time()
         self.timeLastRx = now
@@ -2119,13 +2119,13 @@ class TWCSlave:
                     maxAmpsToDivideAmongSlaves = 0
                 else:
                     # we use the current at the utility main fuse insted of the solar generation api checkGreenEnergy uses
-                    #queue_background_task({'cmd':'checkGreenEnergy'})
+                    # queue_background_task({'cmd':'checkGreenEnergy'})
                         
                     # avgMainsAmps is an average of all 3 phases
                     # One phase could actually export energy while an other imports from the grid.
                     # But we just use an average because we cant control the charging current for each phase.
-                    if(avgMainsAmps < -1):
-                        maxAmpsToDivideAmongSlaves = 0 - avgMainsAmps
+ #                   if(avgMainsAmps < -1):
+ #                       maxAmpsToDivideAmongSlaves = 0 - avgMainsAmps
 
         # Use backgroundTasksLock to prevent the background thread from changing
         # the value of maxAmpsToDivideAmongSlaves after we've checked the value
@@ -2151,13 +2151,13 @@ class TWCSlave:
         # or maybe run function directly >>> check_utility_fuse_current()
 
         # leftOverAmpsForAllTWCs is calculated by check_main_fuse_current() in the background.
-        if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):
+#        if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):
             # Never tell the slaves to draw more amps than the main fuse can handle.
-            maxAmpsToDivideAmongSlaves = leftOverAmpsForAllTWCs
-            if(debugLevel >= 1):
-                print(time_now() + 
-                  " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
-                  " limited by leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
+#            maxAmpsToDivideAmongSlaves = leftOverAmpsForAllTWCs
+#            if(debugLevel >= 1):
+#                print(time_now() + 
+#                  " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
+#                  " limited by leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
         
             
         # Determine how many cars are charging and how many amps they're using

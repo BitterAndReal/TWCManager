@@ -1335,12 +1335,13 @@ def check_green_energy():
             str(greenEnergyData))
 
 
-    # Check how many amps are measured at the utility mains to protect the main fuse of your house.
-    # We want to reduce the charging current if we are using more than the main fuse rating.
+
 def check_utility_fuse_current():
     global debugLevel, backgroundTasksLock, maxAmpsMains, \
            leftOverAmpsForAllTWCs, avgMainsAmps
     
+    # Check how many amps are measured at the utility mains to protect the main fuse of your house.
+    # We want to reduce the charging current if we are using more than the main fuse rating.
 
     '''
     # If you want to use the dutch smart meter to read the AC current you could try DSMR-reader for RaspberryPi
@@ -1384,7 +1385,10 @@ def check_utility_fuse_current():
     # 3 current and 1 voltage adapter
     # http://lechacal.com/wiki/index.php?title=RPIZ_CT3V1
     # http://lechacalshop.com/gb/internetofthing/63-rpizct3v1.html
-    
+
+    # The current measure shield could be on the same Raspberry Pi as TWCmanager
+    # if TWC and mains connection are far away from each other it is possible to use two 
+    # raspberry pi connected to the same network and connecting with a socket
 
     # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
       # run $ sudo raspi-config 
@@ -1392,41 +1396,14 @@ def check_utility_fuse_current():
       # then specify if you want a Serial console (no) 
       # then if you want the Serial Port hardware enabled (yes). 
       # Then use /dev/serial0 in any code which accesses the Serial Port.
-    
-    # if TWC and mains connection are far away from each other it is possible to use two 
-    # raspberry pi connected to the same network
-          
-    # The Pi with the current measure shield using ser2net with the following config:
+      # $ sudo apt-get install python-serial
+      # $ sudo shutdown -r now
 
-       # make sure you have python-serial package installed
-       # $ sudo apt-get install python-serial
-       # $ sudo apt-get install ser2net
-       # sudo nano /etc/ser2net.conf
-       # add this line: 2000:raw:0:/dev/serial0:38400 8DATABITS NONE 1STOPBIT banner
-       # sudo /etc/init.d/ser2net restart
 
-      # And serial port needs to be enabled
-       # run $ sudo raspi-config 
-       # Select Interfacing Options / Serial 
-       # then specify if you want a Serial console (no) 
-       # then if you want the Serial Port hardware enabled (yes). 
-       # Then use /dev/serial0 in any code which accesses the Serial Port.
-       # $ sudo shutdown -r now
-            
-            
-    # and the pi with TWCmanager (Client) using socat to connect a virtual TTY to the remote serial port
-      # instal socat with:
-      # $ git clone -b master --single-branch https://github.com/craSH/socat
-      # and we want socat to start a puty at boot
-      # $ sudo nano /etc/rc.local
-      # add the following line bevore we open TWCManager.py
-        # socat pty,link=$HOME/dev/ttyV0,waitslave tcp:192.168.0.67:2000
-      # $ sudo reboot
-    ##############################
-          
-          
-    # Serial Output: NodeID Realpower1 ApparentPower1 Irms1 Vrms1 PowerFactor1 Realpower2 ApparentPower2 Irms2 Vrms2 PowerFactor2 Realpower3 ApparentPower3 Irms3 Vrms3 PowerFactor3
-        
+
+    # Serial Output of the current measure print:
+    # NodeID Realpower1 ApparentPower1 Irms1 Vrms1 PowerFactor1 Realpower2 ApparentPower2 Irms2 Vrms2 PowerFactor2 Realpower3 ApparentPower3 Irms3 Vrms3 PowerFactor3
+
     # >> serial message split into a list:
     # mains[0] AC board NodeID
     # mains[1] RealPower L1
@@ -1449,26 +1426,27 @@ def check_utility_fuse_current():
     # create empty list
     MainsAmpsPhases = [0] * 3
     
-    import serial
     
-    # if the current measure shield is on the same raspberry pi as the TWCmanager '/dev/serial0' should work
-    # if a Raspberey pi remote server with ser2net and current measure shield is used 
-    # we need a virtual port from the socat putty '/dev/ttyV0'
-    serMains = serial.Serial('/dev/ttyV0', 38400, timeout=1)
+    # socket client
+    # get data from the Raspberry pi running socket-server.py (the pi with the utility current measure print)
+    import socket
 
-    while True:
-        # Read one line from the serial buffer
-        line = serMains.readline()
+    HOST = '192.168.0.67'  # The server's hostname or IP address
+    PORT = 8080            # The port used by the server
 
-        # Remove the trailing carriage return line feed
-        line = line[:-2]
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((HOST, PORT))
+        s.sendall(b'client asking for data')
+        line = s.recv(1024)
 
-        # Split the string at each space and create a list of the data
-        mains = line.split(' ')
-        
-        
-    serMains.close()
-    
+        if(debugLevel >= 10):
+            print(time_now() +
+            print('Received from socket server: ', repr(line))
+
+        line = line[:-2] # Remove the trailing carriage return line feed
+        mains = line.split(' ') # Split the string at each space and create a list of the data
+
+
     if(len(mains) >= 15):
         # We're only interested in the three current measurements
         # put the L1, L2 & L3 Amps in a list

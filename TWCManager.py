@@ -1256,10 +1256,10 @@ def background_tasks_thread():
         elif(task['cmd'] == 'carApiEmailPassword'):
             carApiLastErrorTime = 0
             car_api_available(task['email'], task['password'])
-        elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
-            check_green_energy()
-       elif(task['cmd'] == 'checkUtilityFuseCurrent'):
-            check_utility_fuse_current()
+        elif(task['cmd'] == 'checkUtilityFuseCurrent'):
+             check_utility_fuse_current()
+#        elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
+#            check_green_energy()
 
         # Delete task['cmd'] from backgroundTasksCmds such that
         # queue_background_task() can queue another task['cmd'] in the future.
@@ -1269,71 +1269,6 @@ def background_tasks_thread():
         # backgroundTasksQueue.join() can then be used to block until all tasks
         # in the queue are done.
         backgroundTasksQueue.task_done()
-
-# not used in this fork
-def check_green_energy():
-    global debugLevel, maxAmpsToDivideAmongSlaves, greenEnergyAmpsOffset, \
-           minAmpsPerTWC, backgroundTasksLock
-
-    # I check solar panel generation using an API exposed by The
-    # Energy Detective (TED). It's a piece of hardware available
-    # at http://www. theenergydetective.com
-    # You may also be able to find a way to query a solar system
-    # on the roof using an API provided by your solar installer.
-    # Most of those systems only update the amount of power the
-    # system is producing every 15 minutes at most, but that's
-    # fine for tweaking your car charging.
-    #
-    # In the worst case, you could skip finding realtime green
-    # energy data and simply direct the car to charge at certain
-    # rates at certain times of day that typically have certain
-    # levels of solar or wind generation. To do so, use the hour
-    # and min variables as demonstrated just above this line:
-    #   backgroundTasksQueue.put({'cmd':'checkGreenEnergy')
-    #
-    # The curl command used below can be used to communicate
-    # with almost any web API, even ones that require POST
-    # values or authentication. The -s option prevents curl from
-    # displaying download stats. -m 60 prevents the whole
-    # operation from taking over 60 seconds.
-    greenEnergyData = run_process('curl -s -m 60 "http://192.168.13.58/history/export.csv?T=1&D=0&M=1&C=1"')
-
-    # In case, greenEnergyData will contain something like this:
-    #   MTU, Time, Power, Cost, Voltage
-    #   Solar,11/11/2017 14:20:43,-2.957,-0.29,124.3
-    # The only part we care about is -2.957 which is negative
-    # kW currently being generated. When 0kW is generated, the
-    # negative disappears so we make it optional in the regex
-    # below.
-    m = re.search(b'^Solar,[^,]+,-?([^, ]+),', greenEnergyData, re.MULTILINE)
-    if(m):
-        solarW = int(float(m.group(1)) * 1000)
-
-        # Use backgroundTasksLock to prevent changing maxAmpsToDivideAmongSlaves
-        # if the main thread is in the middle of examining and later using
-        # that value.
-        backgroundTasksLock.acquire()
-
-        # Watts = Volts * Amps
-        # Car charges at 240 volts in North America so we figure
-        # out how many amps * 240 = solarW and limit the car to
-        # that many amps.
-        maxAmpsToDivideAmongSlaves = (solarW / 240) + \
-                                      greenEnergyAmpsOffset
-
-        if(debugLevel >= 1):
-            print("%s: Solar generating %dW so limit car charging to:\n" \
-                 "          %.2fA + %.2fA = %.2fA.  Charge when above %.0fA (minAmpsPerTWC)." % \
-                 (time_now(), solarW, (solarW / 240),
-                 greenEnergyAmpsOffset, maxAmpsToDivideAmongSlaves,
-                 minAmpsPerTWC))
-
-        backgroundTasksLock.release()
-        
-    else:
-        print(time_now() +
-            " ERROR: Can't determine current solar generation from:\n" +
-            str(greenEnergyData))
 
 
 
@@ -2120,7 +2055,9 @@ class TWCSlave:
                 else:
                     # we use the current at the utility main fuse insted of the solar generation api checkGreenEnergy uses
                     # queue_background_task({'cmd':'checkGreenEnergy'})
-                        
+
+                    queue_background_task({'cmd':'checkUtilityFuseCurrent'})
+                    # avgMainsAmps is calculated by check_utility_fuse_current() in the background.
                     # avgMainsAmps is an average of all 3 phases
                     # One phase could actually export energy while an other imports from the grid.
                     # But we just use an average because we cant control the charging current for each phase.
@@ -2150,7 +2087,7 @@ class TWCSlave:
         queue_background_task({'cmd':'checkUtilityFuseCurrent'})
         # or maybe run function directly >>> check_utility_fuse_current()
 
-        # leftOverAmpsForAllTWCs is calculated by check_main_fuse_current() in the background.
+        # leftOverAmpsForAllTWCs is calculated by check_utility_fuse_current() in the background.
         if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):
             # Never tell the slaves to draw more amps than the main fuse can handle.
             maxAmpsToDivideAmongSlaves = leftOverAmpsForAllTWCs
@@ -3223,7 +3160,7 @@ while True:
                             slaveTWC.minAmpsTWCSupports = 5
                         elif(len(msg) == 16):
                             slaveTWC.protocolVersion = 2
-                            slaveTWC.minAmpsTWCSupports = 3
+                            slaveTWC.minAmpsTWCSupports = 6
 
                         if(debugLevel >= 1):
                             print(time_now() + ": Set slave TWC %02X%02X protocolVersion to %d, minAmpsTWCSupports to %d." % \

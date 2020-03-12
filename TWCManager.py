@@ -1353,12 +1353,12 @@ def check_utility_fuse_current():
         MainsAmpsPhases[1] = mains[8]
         MainsAmpsPhases[2] = mains[13]
 
-        del mains[:] # delete the mains after we used the values we need
+        del mains[:] # delete the mains list after we used the values we need
 
         # Define how many samples are taken to calculate an average
         # A small current spike should not trigger the main fuse.
         # 1,1 x In for one hour // 1,5 x In for 10 min // 2 x In for 1 min // 3 x In for 10s // 10 x In for 0.1s
-        mainsSampleCount = 4
+        MaxMainsSampleCount = 4
 
         # create maxMainsSample list if it does not exist (don't know if this is necessary?)
         if not(maxMainsSample):
@@ -1367,8 +1367,8 @@ def check_utility_fuse_current():
         # find phase with highest current which is the limit for all phases and insert at beginning of samples list
         maxMainsSample.append(max(MainsAmpsPhases))
 
-        # remove oldest value in list (slice samples list to mainsSampleCount size)
-        maxMainsSample = maxMainsSample[:mainsSampleCount]
+        # remove oldest value in list (slice samples list to MaxMainsSampleCount size)
+        maxMainsSample = maxMainsSample[:MaxMainsSampleCount]
 
         # calculate average of the samples
         maxMainsAmps = sum(maxMainsSample) / len(maxMainsSample) 
@@ -1377,6 +1377,8 @@ def check_utility_fuse_current():
 
         # avgMainsAmps can be used instead of solar generation api
 
+        AvgMainsSampleCount = 60
+
         # create avgMainsSample list if it does not exist (don't know if this is necessary?)
         if not(avgMainsSample):
             avgMainsSample = []
@@ -1384,8 +1386,8 @@ def check_utility_fuse_current():
         # calculate average of all phases and insert at beginning of samples list
         avgMainsSample.append(sum(MainsAmpsPhases) / len(MainsAmpsPhases))
 
-        # remove oldest value in list (slice samples list to mainsSampleCount size)
-        avgMainsSample = avgMainsSample[:mainsSampleCount]
+        # remove oldest value in list (slice samples list to AvgMainsSampleCount size)
+        avgMainsSample = avgMainsSample[:AvgMainsSampleCount]
 
         # calculate average of the samples
         avgMainsAmps = sum(avgMainsSample) / len(avgMainsSample) 

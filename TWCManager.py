@@ -1355,42 +1355,56 @@ def check_utility_fuse_current():
 
         del mains[:] # delete the mains list after we used the values we need
 
-        # Define how many samples are taken to calculate an average
+        # Define how many List are taken to calculate an average
         # A small current spike should not trigger the main fuse.
         # 1,1 x In for one hour // 1,5 x In for 10 min // 2 x In for 1 min // 3 x In for 10s // 10 x In for 0.1s
-        MaxMainsSampleCount = 4
+        MaxMainsListLength = 10
 
-        # create maxMainsSample list if it does not exist (don't know if this is necessary?)
-        if not(maxMainsSample):
-            maxMainsSample = []
+        # create maxMainsList list if it does not exist (don't know if this is necessary?)
+        if not(maxMainsList):
+            maxMainsList = []
 
-        # find phase with highest current which is the limit for all phases and insert at beginning of samples list
-        maxMainsSample.append(max(MainsAmpsPhases))
+        # find phase with highest current which is the limit for all phases and insert at beginning of List list
+        maxMainsList.append(max(MainsAmpsPhases))
 
-        # remove oldest value in list (slice samples list to MaxMainsSampleCount size)
-        maxMainsSample = maxMainsSample[:MaxMainsSampleCount]
+        # remove oldest value in list (slice list to MaxMainsListLength size)
+        maxMainsList = maxMainsList[:MaxMainsListLength]
 
-        # calculate average of the samples
-        maxMainsAmps = sum(maxMainsSample) / len(maxMainsSample) 
+        # get max value in the List
+        maxMainsAmps = max(maxMainsList)
+        # maxMainsAmps = sum(maxMainsList) / len(maxMainsList)
+
+        # lower current for at least 15 minuts
+        if(maxMainsAmps > lastMaxMainsAmps):
+            lastMaxMainsAmps = maxMainsAmps
+            maxMainsAmpsChangeTime = now
+        else if(now - maxMainsAmpsChangeTime < (60 * 15)):
+            maxMainsAmps = lastMaxMainsAmps
+        else:
+            lastMaxMainsAmps = maxMainsAmps
+
 
 
 
         # avgMainsAmps can be used instead of solar generation api
 
-        AvgMainsSampleCount = 60
+        #AvgMainsListLength = 60
 
-        # create avgMainsSample list if it does not exist (don't know if this is necessary?)
-        if not(avgMainsSample):
-            avgMainsSample = []
+        # create avgMainsList list if it does not exist (don't know if this is necessary?)
+        if not(avgMainsList):
+            avgMainsList = []
 
-        # calculate average of all phases and insert at beginning of samples list
-        avgMainsSample.append(sum(MainsAmpsPhases) / len(MainsAmpsPhases))
+        # calculate average of all phases and insert at beginning of list
+        avgMainsList.append(sum(MainsAmpsPhases) / len(MainsAmpsPhases))
 
-        # remove oldest value in list (slice samples list to AvgMainsSampleCount size)
-        avgMainsSample = avgMainsSample[:AvgMainsSampleCount]
+        # remove oldest value in list (slice list to AvgMainsListLength size)
+        #avgMainsList = avgMainsList[:AvgMainsListLength]
 
-        # calculate average of the samples
-        avgMainsAmps = sum(avgMainsSample) / len(avgMainsSample) 
+        # calculate average of the list and change avgMainsAmps if it is not changed in the last 5 minuts
+        if(now - avgMainsAmpsChangeTime < (60 * 5)):
+            avgMainsAmps = sum(avgMainsList) / len(avgMainsList) 
+            del avgMainsList[:]
+            avgMainsAmpsChangeTime = now
 
 
 
@@ -1399,8 +1413,9 @@ def check_utility_fuse_current():
               " Amps L1 " + str(MainsAmpsPhases[0]) +
               " Amps L2 " + str(MainsAmpsPhases[1]) +
               " Amps L3 " + str(MainsAmpsPhases[2]) +
-              " last mains Sample " + str(maxMainsSample[0]) +
-              " max mains Amps Avg " + str(maxMainsAmps))
+              " last mains List " + str(maxMainsList[0]) +
+              " max mains Amps " + str(maxMainsAmps)) +
+              " avg mains Amps " + str(avgMainsAmps))
 
         # calculate left over amps for all TWCs
         leftOverAmpsForAllTWCs = maxAmpsMains - maxMainsAmps + total_amps_actual_all_twcs()
@@ -1410,8 +1425,8 @@ def check_utility_fuse_current():
         print(time_now() +
         " ERROR: Can't connect to utility mains current sensor! ")
 
-        del maxMainsSample[:]
-        del avgMainsSample[:]
+        del maxMainsList[:]
+        del avgMainsList[:]
         del mains[:]
 
         avgMainsAmps = 0
@@ -1825,11 +1840,11 @@ class TWCSlave:
         #                   Manual says this code means 'The networked Wall
         #                   Connectors have different maximum current
         #                   capabilities.'
-        #   	0000 1000 = No effect
-        #   	0001 0000 = No effect
-        #   	0010 0000 = No effect
-        #   	0100 0000 = No effect
-    	#       1000 0000 = No effect
+        #       0000 1000 = No effect
+        #       0001 0000 = No effect
+        #       0010 0000 = No effect
+        #       0100 0000 = No effect
+        #       1000 0000 = No effect
         #     When two bits are set, the lowest bit (rightmost bit) seems to
         #     take precedence (ie 111 results in 3 blinks, 110 results in 5
         #     blinks).

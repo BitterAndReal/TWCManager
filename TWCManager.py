@@ -1257,7 +1257,7 @@ def background_tasks_thread():
             carApiLastErrorTime = 0
             car_api_available(task['email'], task['password'])
         elif(task['cmd'] == 'checkUtilityFuseCurrent'):
-             check_utility_fuse_current()
+#             check_utility_fuse_current()
 #        elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
 #            check_green_energy()
 
@@ -1335,15 +1335,15 @@ def check_utility_fuse_current():
         s.settimeout(2)
         s.connect((HOST, PORT))
         s.sendall(b'client asking for data')
-        line = s.recv(1024).decode()
+        serial_line = s.recv(1024).decode()
 
 
-        line = line[:-2] # Remove the trailing carriage return line feed
+        serial_line = serial_line[:-2] # Remove the trailing carriage return serial_line feed
         
         if(debugLevel >= 10):
-            print('Received from socket server: ', str(line))
+            print('Received from socket server: ', str(serial_line))
         
-        mains = line.split(' ') # Split the string at each space and create a list of the data
+        mains = serial_line.split(' ') # Split the string at each space and create a list of the data
 
 
     if(len(mains) >= 15):

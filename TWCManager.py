@@ -1257,7 +1257,7 @@ def background_tasks_thread():
             carApiLastErrorTime = 0
             car_api_available(task['email'], task['password'])
         elif(task['cmd'] == 'checkUtilityFuseCurrent'):
-             check_utility_fuse_current()
+#             check_utility_fuse_current()
 #        elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
 #            check_green_energy()
 
@@ -2084,8 +2084,8 @@ class TWCSlave:
                     # avgMainsAmps is an average of all 3 phases
                     # One phase could actually export energy while an other imports from the grid.
                     # But we just use an average because we cant control the charging current for each phase.
-                    if(avgMainsAmps < -1):
-                        maxAmpsToDivideAmongSlaves = 0 - avgMainsAmps
+#                    if(avgMainsAmps < -1):
+#                        maxAmpsToDivideAmongSlaves = 0 - avgMainsAmps
 
         # Use backgroundTasksLock to prevent the background thread from changing
         # the value of maxAmpsToDivideAmongSlaves after we've checked the value
@@ -2111,13 +2111,13 @@ class TWCSlave:
         # or maybe run function directly >>> check_utility_fuse_current()
 
         # leftOverAmpsForAllTWCs is calculated by check_utility_fuse_current() in the background.
-        if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):
-            # Never tell the slaves to draw more amps than the main fuse can handle.
-            maxAmpsToDivideAmongSlaves = leftOverAmpsForAllTWCs
-            if(debugLevel >= 1):
-                print(time_now() + 
-                  " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
-                  " limited by leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
+#        if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):
+#            # Never tell the slaves to draw more amps than the main fuse can handle.
+#            maxAmpsToDivideAmongSlaves = leftOverAmpsForAllTWCs
+#            if(debugLevel >= 1):
+#                print(time_now() + 
+#                  " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
+#                  " limited by leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
         
             
         # Determine how many cars are charging and how many amps they're using

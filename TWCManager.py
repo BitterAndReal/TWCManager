@@ -1347,6 +1347,8 @@ def check_utility_fuse_current():
 
 
     if(len(mains) >= 15):
+        backgroundTasksLock.acquire()
+        
         # We're only interested in the three current measurements
         # put the L1, L2 & L3 Amps in a list
         # consumed power is expected to be a positive value!
@@ -1420,6 +1422,8 @@ def check_utility_fuse_current():
 
         # calculate left over amps for all TWCs
         leftOverAmpsForAllTWCs = maxAmpsMains - maxMainsAmps + total_amps_actual_all_twcs()
+
+        backgroundTasksLock.release()
 
 
     else:

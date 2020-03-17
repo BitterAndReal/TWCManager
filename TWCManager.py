@@ -1257,7 +1257,7 @@ def background_tasks_thread():
             carApiLastErrorTime = 0
             car_api_available(task['email'], task['password'])
         elif(task['cmd'] == 'checkUtilityFuseCurrent'):
-#             check_utility_fuse_current()
+             check_utility_fuse_current()
 #        elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
 #            check_green_energy()
 
@@ -2115,13 +2115,13 @@ class TWCSlave:
         # or maybe run function directly >>> check_utility_fuse_current()
 
         # leftOverAmpsForAllTWCs is calculated by check_utility_fuse_current() in the background.
-#        if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):
-#            # Never tell the slaves to draw more amps than the main fuse can handle.
-#            maxAmpsToDivideAmongSlaves = leftOverAmpsForAllTWCs
-#            if(debugLevel >= 1):
-#                print(time_now() + 
-#                  " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
-#                  " limited by leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
+        if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):
+            # Never tell the slaves to draw more amps than the main fuse can handle.
+            maxAmpsToDivideAmongSlaves = leftOverAmpsForAllTWCs
+            if(debugLevel >= 1):
+                print(time_now() + 
+                  " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
+                  " limited by leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
         
             
         # Determine how many cars are charging and how many amps they're using

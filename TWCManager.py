@@ -1256,8 +1256,8 @@ def background_tasks_thread():
         elif(task['cmd'] == 'carApiEmailPassword'):
             carApiLastErrorTime = 0
             car_api_available(task['email'], task['password'])
-#        elif(task['cmd'] == 'checkUtilityFuseCurrent'):
-#             check_utility_fuse_current()
+        elif(task['cmd'] == 'checkUtilityFuseCurrent'):
+             check_utility_fuse_current()
 #        elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
 #            check_green_energy()
 
@@ -1337,11 +1337,12 @@ def check_utility_fuse_current():
         s.sendall('client asking for data')
         line = s.recv(1024).decode()
 
-        if(debugLevel >= 10):
-            print(time_now() +
-            print('Received from socket server: ', repr(line))
 
         line = line[:-2] # Remove the trailing carriage return line feed
+        
+        if(debugLevel >= 10):
+            print('Received from socket server: ', str(line))
+        
         mains = line.split(' ') # Split the string at each space and create a list of the data
 
 
@@ -1378,7 +1379,7 @@ def check_utility_fuse_current():
         if(maxMainsAmps > lastMaxMainsAmps):
             lastMaxMainsAmps = maxMainsAmps
             maxMainsAmpsChangeTime = now
-        else if(now - maxMainsAmpsChangeTime < (60 * 15)):
+        elif(now - maxMainsAmpsChangeTime < (60 * 15)):
             maxMainsAmps = lastMaxMainsAmps
         else:
             lastMaxMainsAmps = maxMainsAmps
@@ -1414,7 +1415,7 @@ def check_utility_fuse_current():
               " Amps L2 " + str(MainsAmpsPhases[1]) +
               " Amps L3 " + str(MainsAmpsPhases[2]) +
               " last mains List " + str(maxMainsList[0]) +
-              " max mains Amps " + str(maxMainsAmps)) +
+#              " max mains Amps " + str(maxMainsAmps)) +
               " avg mains Amps " + str(avgMainsAmps))
 
         # calculate left over amps for all TWCs
@@ -2101,9 +2102,8 @@ class TWCSlave:
         # if necessary to protect the main fuses.
 
         # run check_utility_fuse_current function in background task >>>
-#        queue_background_task({'cmd':'checkUtilityFuseCurrent'})
+        queue_background_task({'cmd':'checkUtilityFuseCurrent'})
         # or maybe run function directly >>> check_utility_fuse_current()
-        leftOverAmpsForAllTWCs = 9
 
         # leftOverAmpsForAllTWCs is calculated by check_utility_fuse_current() in the background.
         if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):

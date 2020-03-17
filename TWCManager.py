@@ -1334,7 +1334,7 @@ def check_utility_fuse_current():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(2)
         s.connect((HOST, PORT))
-        s.sendall('client asking for data')
+        s.sendall(b'client asking for data')
         line = s.recv(1024).decode()
 
 

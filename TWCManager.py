@@ -1256,8 +1256,8 @@ def background_tasks_thread():
         elif(task['cmd'] == 'carApiEmailPassword'):
             carApiLastErrorTime = 0
             car_api_available(task['email'], task['password'])
-        elif(task['cmd'] == 'checkUtilityFuseCurrent'):
-             check_utility_fuse_current()
+#        elif(task['cmd'] == 'checkUtilityFuseCurrent'):
+#             check_utility_fuse_current()
 #        elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
 #            check_green_energy()
 
@@ -2073,7 +2073,7 @@ class TWCSlave:
                     # we use the current at the utility main fuse insted of the solar generation api checkGreenEnergy uses
                     # queue_background_task({'cmd':'checkGreenEnergy'})
 
-                    queue_background_task({'cmd':'checkUtilityFuseCurrent'})
+                    #queue_background_task({'cmd':'checkUtilityFuseCurrent'})
                     # avgMainsAmps is calculated by check_utility_fuse_current() in the background.
                     # avgMainsAmps is an average of all 3 phases
                     # One phase could actually export energy while an other imports from the grid.
@@ -2101,8 +2101,9 @@ class TWCSlave:
         # if necessary to protect the main fuses.
 
         # run check_utility_fuse_current function in background task >>>
-        queue_background_task({'cmd':'checkUtilityFuseCurrent'})
+#        queue_background_task({'cmd':'checkUtilityFuseCurrent'})
         # or maybe run function directly >>> check_utility_fuse_current()
+        leftOverAmpsForAllTWCs = 9
 
         # leftOverAmpsForAllTWCs is calculated by check_utility_fuse_current() in the background.
         if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):

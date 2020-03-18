@@ -208,8 +208,6 @@ minAmpsPerTWC = 6
 # a car not at home being stopped from charging by the API.
 onlyChargeMultiCarsAtHome = True
 
-# greenEnergyAmpsOffset is not used in this fork because we measure live energy 
-# at the utility meter where it enters / leves the house and not at the solar inverter!
 # After determining how much green energy is available for charging, we add
 # greenEnergyAmpsOffset to the value. This is most often given a negative value
 # equal to the average amount of power consumed by everything other than car
@@ -223,7 +221,7 @@ onlyChargeMultiCarsAtHome = True
 # North American 240V grid. In other words, during car charging, you want your
 # utility meter to show a value close to 0kW meaning no energy is being sent to
 # or from the grid.
-# greenEnergyAmpsOffset = 0
+greenEnergyAmpsOffset = 0
 
 # Choose how much debugging info to output.
 # 0 is no output other than errors.
@@ -1256,10 +1254,10 @@ def background_tasks_thread():
         elif(task['cmd'] == 'carApiEmailPassword'):
             carApiLastErrorTime = 0
             car_api_available(task['email'], task['password'])
+        elif(task['cmd'] == 'checkGreenEnergy'):
+            check_green_energy()
         elif(task['cmd'] == 'checkUtilityFuseCurrent'):
              check_utility_fuse_current()
-#        elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
-#            check_green_energy()
 
         # Delete task['cmd'] from backgroundTasksCmds such that
         # queue_background_task() can queue another task['cmd'] in the future.
@@ -1269,6 +1267,71 @@ def background_tasks_thread():
         # backgroundTasksQueue.join() can then be used to block until all tasks
         # in the queue are done.
         backgroundTasksQueue.task_done()
+
+def check_green_energy():
+    global debugLevel, maxAmpsToDivideAmongSlaves, greenEnergyAmpsOffset, \
+           minAmpsPerTWC, backgroundTasksLock
+
+    # I check solar panel generation using an API exposed by The
+    # Energy Detective (TED). It's a piece of hardware available
+    # at http://www. theenergydetective.com
+    # You may also be able to find a way to query a solar system
+    # on the roof using an API provided by your solar installer.
+    # Most of those systems only update the amount of power the
+    # system is producing every 15 minutes at most, but that's
+    # fine for tweaking your car charging.
+    #
+    # In the worst case, you could skip finding realtime green
+    # energy data and simply direct the car to charge at certain
+    # rates at certain times of day that typically have certain
+    # levels of solar or wind generation. To do so, use the hour
+    # and min variables as demonstrated just above this line:
+    #   backgroundTasksQueue.put({'cmd':'checkGreenEnergy')
+    #
+    # The curl command used below can be used to communicate
+    # with almost any web API, even ones that require POST
+    # values or authentication. The -s option prevents curl from
+    # displaying download stats. -m 60 prevents the whole
+    # operation from taking over 60 seconds.
+    greenEnergyData = run_process('curl -s -m 60 "http://192.168.13.58/history/export.csv?T=1&D=0&M=1&C=1"')
+
+    # In case, greenEnergyData will contain something like this:
+    #   MTU, Time, Power, Cost, Voltage
+    #   Solar,11/11/2017 14:20:43,-2.957,-0.29,124.3
+    # The only part we care about is -2.957 which is negative
+    # kW currently being generated. When 0kW is generated, the
+    # negative disappears so we make it optional in the regex
+    # below.
+    m = re.search(b'^Solar,[^,]+,-?([^, ]+),', greenEnergyData, re.MULTILINE)
+    if(m):
+        solarW = int(float(m.group(1)) * 1000)
+
+        # Use backgroundTasksLock to prevent changing maxAmpsToDivideAmongSlaves
+        # if the main thread is in the middle of examining and later using
+        # that value.
+        backgroundTasksLock.acquire()
+
+        # Watts = Volts * Amps
+        # Car charges at 240 volts in North America so we figure
+        # out how many amps * 240 = solarW and limit the car to
+        # that many amps.
+        maxAmpsToDivideAmongSlaves = (solarW / 240) + \
+                                      greenEnergyAmpsOffset
+
+        if(debugLevel >= 1):
+            print("%s: Solar generating %dW so limit car charging to:\n" \
+                 "          %.2fA + %.2fA = %.2fA.  Charge when above %.0fA (minAmpsPerTWC)." % \
+                 (time_now(), solarW, (solarW / 240),
+                 greenEnergyAmpsOffset, maxAmpsToDivideAmongSlaves,
+                 minAmpsPerTWC))
+
+        backgroundTasksLock.release()
+    else:
+        print(time_now() +
+            " ERROR: Can't determine current solar generation from:\n" +
+            str(greenEnergyData))
+
+
 
 
 
@@ -1347,7 +1410,6 @@ def check_utility_fuse_current():
 
 
     if(len(mains) >= 15):
-        backgroundTasksLock.acquire()
         
         # We're only interested in the three current measurements
         # put the L1, L2 & L3 Amps in a list
@@ -1417,13 +1479,13 @@ def check_utility_fuse_current():
               " Amps L2 " + str(MainsAmpsPhases[1]) +
               " Amps L3 " + str(MainsAmpsPhases[2]) +
               " last mains List " + str(maxMainsList[0]) +
-#              " max mains Amps " + str(maxMainsAmps)) +
+              " max mains Amps " + str(maxMainsAmps) +
               " avg mains Amps " + str(avgMainsAmps))
 
         # calculate left over amps for all TWCs
         leftOverAmpsForAllTWCs = maxAmpsMains - maxMainsAmps + total_amps_actual_all_twcs()
 
-        backgroundTasksLock.release()
+
 
 
     else:
@@ -1436,7 +1498,6 @@ def check_utility_fuse_current():
 
         avgMainsAmps = 0
         leftOverAmpsForAllTWCs = 0
-
 
 
 #
@@ -1845,11 +1906,11 @@ class TWCSlave:
         #                   Manual says this code means 'The networked Wall
         #                   Connectors have different maximum current
         #                   capabilities.'
-        #       0000 1000 = No effect
-        #       0001 0000 = No effect
-        #       0010 0000 = No effect
-        #       0100 0000 = No effect
-        #       1000 0000 = No effect
+        #   	0000 1000 = No effect
+        #   	0001 0000 = No effect
+        #   	0010 0000 = No effect
+        #   	0100 0000 = No effect
+    	#       1000 0000 = No effect
         #     When two bits are set, the lowest bit (rightmost bit) seems to
         #     take precedence (ie 111 results in 3 blinks, 110 results in 5
         #     blinks).
@@ -2004,11 +2065,6 @@ class TWCSlave:
             nonScheduledAmpsMax = -1
             save_settings()
 
-
-        # run check_utility_fuse_current function in background task >>>
-        queue_background_task({'cmd':'checkUtilityFuseCurrent'})
-
-
         # Check if we're within the hours we must use scheduledAmpsMax instead
         # of nonScheduledAmpsMax
         blnUseScheduledAmps = 0
@@ -2080,16 +2136,7 @@ class TWCSlave:
                 if(ltNow.tm_hour < 6 or ltNow.tm_hour >= 20):
                     maxAmpsToDivideAmongSlaves = 0
                 else:
-                    # we use the current at the utility main fuse insted of the solar generation api checkGreenEnergy uses
-                    # queue_background_task({'cmd':'checkGreenEnergy'})
-
-                    #queue_background_task({'cmd':'checkUtilityFuseCurrent'})
-                    # avgMainsAmps is calculated by check_utility_fuse_current() in the background.
-                    # avgMainsAmps is an average of all 3 phases
-                    # One phase could actually export energy while an other imports from the grid.
-                    # But we just use an average because we cant control the charging current for each phase.
-#                    if(avgMainsAmps < -1):
-#                        maxAmpsToDivideAmongSlaves = 0 - avgMainsAmps
+                    queue_background_task({'cmd':'checkGreenEnergy'})
 
         # Use backgroundTasksLock to prevent the background thread from changing
         # the value of maxAmpsToDivideAmongSlaves after we've checked the value
@@ -2105,14 +2152,15 @@ class TWCSlave:
                     " > wiringMaxAmpsAllTWCs " + str(wiringMaxAmpsAllTWCs) +
                     ".\nSee notes above wiringMaxAmpsAllTWCs in the 'Configuration parameters' section.")
             maxAmpsToDivideAmongSlaves = wiringMaxAmpsAllTWCs
-            
+
 #          
         # Check how many amps are measured at the utility mains fuse to reduce charging current 
         # if necessary to protect the main fuses.
 
         # run check_utility_fuse_current function in background task >>>
- #       queue_background_task({'cmd':'checkUtilityFuseCurrent'})
-        # or maybe run function directly >>> check_utility_fuse_current()
+        #queue_background_task({'cmd':'checkUtilityFuseCurrent'})
+        # or maybe run function directly
+        check_utility_fuse_current()
 
         # leftOverAmpsForAllTWCs is calculated by check_utility_fuse_current() in the background.
         if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):
@@ -2123,7 +2171,7 @@ class TWCSlave:
                   " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
                   " limited by leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
         
-            
+
         # Determine how many cars are charging and how many amps they're using
         numCarsCharging = 1
         desiredAmpsOffered = maxAmpsToDivideAmongSlaves

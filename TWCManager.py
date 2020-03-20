@@ -1418,12 +1418,12 @@ def check_utility_fuse_current():
         MainsAmpsPhases[1] = mains[8]
         MainsAmpsPhases[2] = mains[13]
 
-        del mains[:] # delete the mains list after we used the values we need
+#        del mains[:] # delete the mains list after we used the values we need
 
         # Define how many List are taken to calculate an average
         # A small current spike should not trigger the main fuse.
         # 1,1 x In for one hour // 1,5 x In for 10 min // 2 x In for 1 min // 3 x In for 10s // 10 x In for 0.1s
-        MaxMainsListLength = 10
+#        MaxMainsListLength = 10
 
         # create maxMainsList list if it does not exist (don't know if this is necessary?)
 #        if not(maxMainsList):
@@ -1483,7 +1483,7 @@ def check_utility_fuse_current():
               " avg mains Amps " + str(avgMainsAmps))
 
         # calculate left over amps for all TWCs
-        leftOverAmpsForAllTWCs = maxAmpsMains - maxMainsAmps + total_amps_actual_all_twcs()
+#        leftOverAmpsForAllTWCs = maxAmpsMains - maxMainsAmps + total_amps_actual_all_twcs()
 
 
 
@@ -1494,10 +1494,10 @@ def check_utility_fuse_current():
 
  #       del maxMainsList[:]
  #       del avgMainsList[:]
-        del mains[:]
+ #       del mains[:]
 
-        avgMainsAmps = 0
-        leftOverAmpsForAllTWCs = 0
+ #       avgMainsAmps = 0
+ #       leftOverAmpsForAllTWCs = 0
 
 
 #

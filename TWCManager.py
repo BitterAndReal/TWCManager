@@ -1384,20 +1384,121 @@ def check_utility_fuse_current():
     # mains[15] PowerFactor L3
 
 
+    # create empty list
+    MainsAmpsPhases = [0] * 3
 
-    avgMainsAmps = 5
-    maxMainsAmps = 10
+
+    # socket client
+    # get data from the Raspberry pi running socket-server.py (the pi with the utility current measure print)
+
+    HOST = '192.168.0.67'  # The server's hostname or IP address
+    PORT = 65432           # The port used by the server
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(2)
+        s.connect((HOST, PORT))
+        s.sendall(b'client asking for data')
+        serial_line = s.recv(1024).decode()
+
+
+        serial_line = serial_line[:-2] # Remove the trailing carriage return serial_line feed
         
-    if(debugLevel >= 8):
-        print(time_now() +
-          " max mains Amps " + str(maxMainsAmps) +
-          " avg mains Amps " + str(avgMainsAmps))
+        if(debugLevel >= 10):
+            print('Received from socket server: ', str(serial_line))
+        
+        mains = serial_line.split(' ') # Split the string at each space and create a list of the data
+
+
+    if(len(mains) >= 15):
+        backgroundTasksLock.acquire()
+        
+        # We're only interested in the three current measurements
+        # put the L1, L2 & L3 Amps in a list
+        # consumed power is expected to be a positive value!
+        MainsAmpsPhases[0] = mains[3]
+        MainsAmpsPhases[1] = mains[8]
+        MainsAmpsPhases[2] = mains[13]
+
+        del mains[:] # delete the mains list after we used the values we need
+
+        # Define how many List are taken to calculate an average
+        # A small current spike should not trigger the main fuse.
+        # 1,1 x In for one hour // 1,5 x In for 10 min // 2 x In for 1 min // 3 x In for 10s // 10 x In for 0.1s
+        MaxMainsListLength = 10
+
+        # create maxMainsList list if it does not exist (don't know if this is necessary?)
+        if not(maxMainsList):
+            maxMainsList = []
+
+        # find phase with highest current which is the limit for all phases and insert at beginning of List list
+        maxMainsList.append(max(MainsAmpsPhases))
+
+        # remove oldest value in list (slice list to MaxMainsListLength size)
+        maxMainsList = maxMainsList[:MaxMainsListLength]
+
+        # get max value in the List
+        maxMainsAmps = max(maxMainsList)
+        # maxMainsAmps = sum(maxMainsList) / len(maxMainsList)
+
+        # lower current for at least 15 minuts
+        if(maxMainsAmps > lastMaxMainsAmps):
+            lastMaxMainsAmps = maxMainsAmps
+            maxMainsAmpsChangeTime = now
+        elif(now - maxMainsAmpsChangeTime < (60 * 15)):
+            maxMainsAmps = lastMaxMainsAmps
+        else:
+            lastMaxMainsAmps = maxMainsAmps
+
+
+
+
+        # avgMainsAmps can be used instead of solar generation api
+
+        #AvgMainsListLength = 60
+
+        # create avgMainsList list if it does not exist (don't know if this is necessary?)
+        if not(avgMainsList):
+            avgMainsList = []
+
+        # calculate average of all phases and insert at beginning of list
+        avgMainsList.append(sum(MainsAmpsPhases) / len(MainsAmpsPhases))
+
+        # remove oldest value in list (slice list to AvgMainsListLength size)
+        #avgMainsList = avgMainsList[:AvgMainsListLength]
+
+        # calculate average of the list and change avgMainsAmps if it is not changed in the last 5 minuts
+        if(now - avgMainsAmpsChangeTime < (60 * 5)):
+            avgMainsAmps = sum(avgMainsList) / len(avgMainsList) 
+            del avgMainsList[:]
+            avgMainsAmpsChangeTime = now
+
+
+
+        if(debugLevel >= 8):
+            print(time_now() +
+              " Amps L1 " + str(MainsAmpsPhases[0]) +
+              " Amps L2 " + str(MainsAmpsPhases[1]) +
+              " Amps L3 " + str(MainsAmpsPhases[2]) +
+              " last mains List " + str(maxMainsList[0]) +
+              " max mains Amps " + str(maxMainsAmps) +
+              " avg mains Amps " + str(avgMainsAmps))
 
         # calculate left over amps for all TWCs
-    leftOverAmpsForAllTWCs = maxAmpsMains - maxMainsAmps + total_amps_actual_all_twcs()
+        leftOverAmpsForAllTWCs = maxAmpsMains - maxMainsAmps + total_amps_actual_all_twcs()
+
+#        backgroundTasksLock.release()
 
 
+    else:
+        print(time_now() +
+        " ERROR: Can't connect to utility mains current sensor! ")
 
+        del maxMainsList[:]
+        del avgMainsList[:]
+        del mains[:]
+
+        avgMainsAmps = 0
+        leftOverAmpsForAllTWCs = 0
 
 
 
@@ -2059,9 +2160,9 @@ class TWCSlave:
         # if necessary to protect the main fuses.
 
         # run check_utility_fuse_current function in background task >>>
-        queue_background_task({'cmd':'checkUtilityFuseCurrent'})
+        #queue_background_task({'cmd':'checkUtilityFuseCurrent'})
         # or maybe run function directly
-        #check_utility_fuse_current()
+        check_utility_fuse_current()
 
         # leftOverAmpsForAllTWCs is calculated by check_utility_fuse_current() in the background.
         if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):

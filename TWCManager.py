@@ -1384,39 +1384,17 @@ def check_utility_fuse_current():
     # mains[15] PowerFactor L3
 
 
-    # create empty list
-    MainsAmpsPhases = [0] * 3
 
+    mains = 20
 
-    # socket client
-    # get data from the Raspberry pi running socket-server.py (the pi with the utility current measure print)
-
-    HOST = '192.168.0.67'  # The server's hostname or IP address
-    PORT = 65432           # The port used by the server
-
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(2)
-        s.connect((HOST, PORT))
-        s.sendall(b'client asking for data')
-        serial_line = s.recv(1024).decode()
-
-
-        serial_line = serial_line[:-2] # Remove the trailing carriage return serial_line feed
-        
-        if(debugLevel >= 10):
-            print('Received from socket server: ', str(serial_line))
-        
-        mains = serial_line.split(' ') # Split the string at each space and create a list of the data
-
-
-    if(len(mains) >= 15):
+    if(mains >= 15):
         
         # We're only interested in the three current measurements
         # put the L1, L2 & L3 Amps in a list
         # consumed power is expected to be a positive value!
-        MainsAmpsPhases[0] = mains[3]
-        MainsAmpsPhases[1] = mains[8]
-        MainsAmpsPhases[2] = mains[13]
+#        MainsAmpsPhases[0] = mains[3]
+#        MainsAmpsPhases[1] = mains[8]
+#        MainsAmpsPhases[2] = mains[13]
 
 #        del mains[:] # delete the mains list after we used the values we need
 
@@ -1448,7 +1426,7 @@ def check_utility_fuse_current():
 #        else:
 #            lastMaxMainsAmps = maxMainsAmps
 
-        maxMainsAmps = max(MainsAmpsPhases)
+
 
 
         # avgMainsAmps can be used instead of solar generation api
@@ -1471,8 +1449,9 @@ def check_utility_fuse_current():
 #            del avgMainsList[:]
 #            avgMainsAmpsChangeTime = now
 
-        avgMainsAmps = sum(MainsAmpsPhases) / len(MainsAmpsPhases)
-
+        avgMainsAmps = 5
+        maxMainsAmps = 10
+        
         if(debugLevel >= 8):
             print(time_now() +
               " Amps L1 " + str(MainsAmpsPhases[0]) +

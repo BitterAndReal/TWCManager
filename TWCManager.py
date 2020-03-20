@@ -1425,21 +1425,12 @@ def check_utility_fuse_current():
 
   
 
-        # calculate average of all phases and insert at beginning of list
-        avgMainsAmps = sum(MainsAmpsPhases) / len(MainsAmpsPhases)
-
-        # remove oldest value in list (slice list to AvgMainsListLength size)
-        #avgMainsList = avgMainsList[:AvgMainsListLength]
-
-
-
         if(debugLevel >= 8):
             print(time_now() +
               " Amps L1 " + str(MainsAmpsPhases[0]) +
               " Amps L2 " + str(MainsAmpsPhases[1]) +
               " Amps L3 " + str(MainsAmpsPhases[2]) +
-              " max mains Amps " + str(maxMainsAmps) +
-              " avg mains Amps " + str(avgMainsAmps))
+              " max mains Amps " + str(maxMainsAmps))
 
         # calculate left over amps for all TWCs
         leftOverAmpsForAllTWCs = maxAmpsMains - maxMainsAmps + total_amps_actual_all_twcs()

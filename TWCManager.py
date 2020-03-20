@@ -1433,7 +1433,7 @@ def check_utility_fuse_current():
               " max mains Amps " + str(maxMainsAmps))
 
         # calculate left over amps for all TWCs
-        leftOverAmpsForAllTWCs = maxAmpsMains - maxMainsAmps + total_amps_actual_all_twcs()
+        leftOverAmpsForAllTWCs = int(maxAmpsMains) - int(maxMainsAmps) + int(total_amps_actual_all_twcs())
 
 #        backgroundTasksLock.release()
 

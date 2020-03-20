@@ -270,7 +270,7 @@ slaveSign = bytearray(b'\x77')
 # the most common main fuse values in the Netherlands are: 
 #   single phase 35amps = 28
 #   or 3 phase 25amps = 22
-maxAmpsMains = 22
+maxAmpsMains = 15
 
 
             
@@ -2059,9 +2059,9 @@ class TWCSlave:
         # if necessary to protect the main fuses.
 
         # run check_utility_fuse_current function in background task >>>
-        #queue_background_task({'cmd':'checkUtilityFuseCurrent'})
+        queue_background_task({'cmd':'checkUtilityFuseCurrent'})
         # or maybe run function directly
-        check_utility_fuse_current()
+        #check_utility_fuse_current()
 
         # leftOverAmpsForAllTWCs is calculated by check_utility_fuse_current() in the background.
         if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):

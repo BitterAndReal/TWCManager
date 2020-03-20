@@ -1425,22 +1425,20 @@ def check_utility_fuse_current():
 
   
 
+
+        # calculate left over amps for all TWCs
+        leftOverAmpsForAllTWCs = float(maxAmpsMains) - float(maxMainsAmps) + float(total_amps_actual_all_twcs())
+
+
         if(debugLevel >= 8):
             print(time_now() +
               " Amps L1 " + str(MainsAmpsPhases[0]) +
               " Amps L2 " + str(MainsAmpsPhases[1]) +
               " Amps L3 " + str(MainsAmpsPhases[2]) +
-              " max mains Amps " + str(maxMainsAmps))
-
-        # calculate left over amps for all TWCs
-        leftOverAmpsForAllTWCs = float(maxAmpsMains) - float(maxMainsAmps) + float(total_amps_actual_all_twcs())
-
-#        backgroundTasksLock.release()
+              " max mains Amps " + str(maxMainsAmps) +
+              " leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
 
 
-    else:
-        print(time_now() +
-        " ERROR: Can't connect to utility mains current sensor! ")
 
 
 
@@ -2083,11 +2081,17 @@ class TWCSlave:
                 if(ltNow.tm_hour < 6 or ltNow.tm_hour >= 20):
                     maxAmpsToDivideAmongSlaves = 0
                 else:
-                    queue_background_task({'cmd':'checkGreenEnergy'})
+                    #queue_background_task({'cmd':'checkGreenEnergy'})
 
         # Use backgroundTasksLock to prevent the background thread from changing
         # the value of maxAmpsToDivideAmongSlaves after we've checked the value
         # is safe to use but before we've used it.
+        
+        # run check_utility_fuse_current function in background task >>>
+        #queue_background_task({'cmd':'checkUtilityFuseCurrent'})
+        # or maybe run function directly
+        check_utility_fuse_current()
+
         backgroundTasksLock.acquire()
 
         if(maxAmpsToDivideAmongSlaves > wiringMaxAmpsAllTWCs):
@@ -2104,10 +2108,6 @@ class TWCSlave:
         # Check how many amps are measured at the utility mains fuse to reduce charging current 
         # if necessary to protect the main fuses.
 
-        # run check_utility_fuse_current function in background task >>>
-        #queue_background_task({'cmd':'checkUtilityFuseCurrent'})
-        # or maybe run function directly
-        check_utility_fuse_current()
 
         # leftOverAmpsForAllTWCs is calculated by check_utility_fuse_current() in the background.
         if(maxAmpsToDivideAmongSlaves > leftOverAmpsForAllTWCs):

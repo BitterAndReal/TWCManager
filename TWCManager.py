@@ -208,6 +208,8 @@ minAmpsPerTWC = 6
 # a car not at home being stopped from charging by the API.
 onlyChargeMultiCarsAtHome = True
 
+# greenEnergyAmpsOffset is not used in this fork because we measure live energy
+# at the utility meter where it enters / leves the house and not at the solar inverter!
 # After determining how much green energy is available for charging, we add
 # greenEnergyAmpsOffset to the value. This is most often given a negative value
 # equal to the average amount of power consumed by everything other than car
@@ -221,7 +223,7 @@ onlyChargeMultiCarsAtHome = True
 # North American 240V grid. In other words, during car charging, you want your
 # utility meter to show a value close to 0kW meaning no energy is being sent to
 # or from the grid.
-greenEnergyAmpsOffset = 0
+# greenEnergyAmpsOffset = 0
 
 # Choose how much debugging info to output.
 # 0 is no output other than errors.
@@ -267,13 +269,11 @@ slaveSign = bytearray(b'\x77')
 
 
 # set maxAmpsMains to 90% of the utility mains fuse of your house
-# the most common main fuse values in the Netherlands are: 
+# the most common main fuse values in the Netherlands are:
 #   single phase 35amps = 28
 #   or 3 phase 25amps = 22
-maxAmpsMains = 15
+maxAmpsMains = 22
 
-
-            
 
 #
 # End configuration parameters
@@ -291,11 +291,14 @@ def time_now():
     return(datetime.now().strftime("%H:%M:%S" + (
         ".%f" if displayMilliseconds else "")))
 
-def hex_str(s:str):
+
+def hex_str(s: str):
     return " ".join("{:02X}".format(ord(c)) for c in s)
 
-def hex_str(ba:bytearray):
+
+def hex_str(ba: bytearray):
     return " ".join("{:02X}".format(c) for c in ba)
+
 
 def run_process(cmd):
     result = None
@@ -310,10 +313,10 @@ def run_process(cmd):
 
 def load_settings():
     global debugLevel, settingsFileName, nonScheduledAmpsMax, scheduledAmpsMax, \
-           scheduledAmpsStartHour, scheduledAmpsEndHour, \
-           scheduledAmpsDaysBitmap, hourResumeTrackGreenEnergy, kWhDelivered, \
-           carApiBearerToken, carApiRefreshToken, carApiTokenExpireTime, \
-           homeLat, homeLon
+        scheduledAmpsStartHour, scheduledAmpsEndHour, \
+        scheduledAmpsDaysBitmap, hourResumeTrackGreenEnergy, kWhDelivered, \
+        carApiBearerToken, carApiRefreshToken, carApiTokenExpireTime, \
+        homeLat, homeLon
 
     try:
         fh = open(settingsFileName, 'r')
@@ -351,14 +354,16 @@ def load_settings():
             if(m):
                 scheduledAmpsDaysBitmap = int(m.group(1))
                 if(debugLevel >= 10):
-                    print("load_settings: scheduledAmpsDaysBitmap set to " + str(scheduledAmpsDaysBitmap))
+                    print("load_settings: scheduledAmpsDaysBitmap set to " +
+                          str(scheduledAmpsDaysBitmap))
                 continue
 
             m = re.search(r'^\s*hourResumeTrackGreenEnergy\s*=\s*([-0-9.]+)', line, re.MULTILINE)
             if(m):
                 hourResumeTrackGreenEnergy = float(m.group(1))
                 if(debugLevel >= 10):
-                    print("load_settings: hourResumeTrackGreenEnergy set to " + str(hourResumeTrackGreenEnergy))
+                    print("load_settings: hourResumeTrackGreenEnergy set to " +
+                          str(hourResumeTrackGreenEnergy))
                 continue
 
             m = re.search(r'^\s*kWhDelivered\s*=\s*([-0-9.]+)', line, re.MULTILINE)
@@ -410,31 +415,33 @@ def load_settings():
     except FileNotFoundError:
         pass
 
+
 def save_settings():
     global debugLevel, settingsFileName, nonScheduledAmpsMax, scheduledAmpsMax, \
-           scheduledAmpsStartHour, scheduledAmpsEndHour, \
-           scheduledAmpsDaysBitmap, hourResumeTrackGreenEnergy, kWhDelivered, \
-           carApiBearerToken, carApiRefreshToken, carApiTokenExpireTime, \
-           homeLat, homeLon
+        scheduledAmpsStartHour, scheduledAmpsEndHour, \
+        scheduledAmpsDaysBitmap, hourResumeTrackGreenEnergy, kWhDelivered, \
+        carApiBearerToken, carApiRefreshToken, carApiTokenExpireTime, \
+        homeLat, homeLon
 
     fh = open(settingsFileName, 'w')
     fh.write('nonScheduledAmpsMax=' + str(nonScheduledAmpsMax) +
-            '\nscheduledAmpsMax=' + str(scheduledAmpsMax) +
-            '\nscheduledAmpsStartHour=' + str(scheduledAmpsStartHour) +
-            '\nscheduledAmpsEndHour=' + str(scheduledAmpsEndHour) +
-            '\nscheduledAmpsDaysBitmap=' + str(scheduledAmpsDaysBitmap) +
-            '\nhourResumeTrackGreenEnergy=' + str(hourResumeTrackGreenEnergy) +
-            '\nkWhDelivered=' + str(kWhDelivered) +
-            '\ncarApiBearerToken=' + str(carApiBearerToken) +
-            '\ncarApiRefreshToken=' + str(carApiRefreshToken) +
-            '\ncarApiTokenExpireTime=' + str(int(carApiTokenExpireTime)) +
-            '\nhomeLat=' + str(homeLat) +
-            '\nhomeLon=' + str(homeLon)
-            )
+             '\nscheduledAmpsMax=' + str(scheduledAmpsMax) +
+             '\nscheduledAmpsStartHour=' + str(scheduledAmpsStartHour) +
+             '\nscheduledAmpsEndHour=' + str(scheduledAmpsEndHour) +
+             '\nscheduledAmpsDaysBitmap=' + str(scheduledAmpsDaysBitmap) +
+             '\nhourResumeTrackGreenEnergy=' + str(hourResumeTrackGreenEnergy) +
+             '\nkWhDelivered=' + str(kWhDelivered) +
+             '\ncarApiBearerToken=' + str(carApiBearerToken) +
+             '\ncarApiRefreshToken=' + str(carApiRefreshToken) +
+             '\ncarApiTokenExpireTime=' + str(int(carApiTokenExpireTime)) +
+             '\nhomeLat=' + str(homeLat) +
+             '\nhomeLon=' + str(homeLon)
+             )
 
     fh.close()
 
-def trim_pad(s:bytearray, makeLen):
+
+def trim_pad(s: bytearray, makeLen):
     # Trim or pad s with zeros so that it's makeLen length.
     while(len(s) < makeLen):
         s += b'\x00'
@@ -486,7 +493,8 @@ def send_msg(msg):
 
     timeLastTx = time.time()
 
-def unescape_msg(msg:bytearray, msgLen):
+
+def unescape_msg(msg: bytearray, msgLen):
     # Given a message received on the RS485 network, remove leading and trailing
     # C0 byte, unescape special byte values, and verify its data matches the CRC
     # byte.
@@ -508,10 +516,10 @@ def unescape_msg(msg:bytearray, msgLen):
             elif(msg[i+1] == 0xdd):
                 msg[i:i+2] = [0xdb]
             else:
-                print(time_now(), "ERROR: Special character 0xDB in message is " \
-                  "followed by invalid character 0x%02X.  " \
-                  "Message may be corrupted." %
-                  (msg[i+1]))
+                print(time_now(), "ERROR: Special character 0xDB in message is "
+                      "followed by invalid character 0x%02X.  "
+                      "Message may be corrupted." %
+                      (msg[i+1]))
 
                 # Replace the character with something even though it's probably
                 # not the right thing.
@@ -573,7 +581,8 @@ def send_master_linkready1():
     # send slave linkready every 10 seconds whether or not they got master
     # linkready1/2 and if a master sees slave linkready, it will start sending
     # the slave master heartbeat once per second and the two are then connected.
-    send_msg(bytearray(b'\xFC\xE1') + fakeTWCID + masterSign + bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00'))
+    send_msg(bytearray(b'\xFC\xE1') + fakeTWCID + masterSign +
+             bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00'))
 
 
 def send_master_linkready2():
@@ -596,7 +605,9 @@ def send_master_linkready2():
     # Once a master starts sending heartbeat messages to a slave, it
     # no longer sends the global linkready2 message (or if it does,
     # they're quite rare so I haven't seen them).
-    send_msg(bytearray(b'\xFB\xE2') + fakeTWCID + masterSign + bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00'))
+    send_msg(bytearray(b'\xFB\xE2') + fakeTWCID + masterSign +
+             bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00'))
+
 
 def send_slave_linkready():
     # In the message below, \x1F\x40 (hex 0x1f40 or 8000 in base 10) refers to
@@ -607,11 +618,13 @@ def send_slave_linkready():
     # master TWC immediately start blinking its red LED 6 times with top green
     # LED on. Manual says this means "The networked Wall Connectors have
     # different maximum current capabilities".
-    msg = bytearray(b'\xFD\xE2') + fakeTWCID + slaveSign + bytearray(b'\x1F\x40\x00\x00\x00\x00\x00\x00')
+    msg = bytearray(b'\xFD\xE2') + fakeTWCID + slaveSign + \
+        bytearray(b'\x1F\x40\x00\x00\x00\x00\x00\x00')
     if(self.protocolVersion == 2):
         msg += bytearray(b'\x00\x00')
 
     send_msg(msg)
+
 
 def master_id_conflict():
     # We're playing fake slave, and we got a message from a master with our TWCID.
@@ -622,9 +635,10 @@ def master_id_conflict():
     # Real slaves change their sign during a conflict, so we do too.
     slaveSign[0] = random.randint(0, 0xFF)
 
-    print(time_now() + ": Master's TWCID matches our fake slave's TWCID.  " \
-        "Picked new random TWCID %02X%02X with sign %02X" % \
-        (fakeTWCID[0], fakeTWCID[1], slaveSign[0]))
+    print(time_now() + ": Master's TWCID matches our fake slave's TWCID.  "
+          "Picked new random TWCID %02X%02X with sign %02X" %
+          (fakeTWCID[0], fakeTWCID[1], slaveSign[0]))
+
 
 def new_slave(newSlaveID, maxAmps):
     global slaveTWCs, slaveTWCRoundRobin
@@ -642,11 +656,12 @@ def new_slave(newSlaveID, maxAmps):
     slaveTWCRoundRobin.append(slaveTWC)
 
     if(len(slaveTWCRoundRobin) > 3):
-        print("WARNING: More than 3 slave TWCs seen on network.  " \
-            "Dropping oldest: " + hex_str(slaveTWCRoundRobin[0].TWCID) + ".")
+        print("WARNING: More than 3 slave TWCs seen on network.  "
+              "Dropping oldest: " + hex_str(slaveTWCRoundRobin[0].TWCID) + ".")
         delete_slave(slaveTWCRoundRobin[0].TWCID)
 
     return slaveTWC
+
 
 def delete_slave(deleteSlaveID):
     global slaveTWCs, slaveTWCRoundRobin
@@ -660,6 +675,7 @@ def delete_slave(deleteSlaveID):
     except KeyError:
         pass
 
+
 def total_amps_actual_all_twcs():
     global debugLevel, slaveTWCRoundRobin, wiringMaxAmpsAllTWCs
 
@@ -671,10 +687,10 @@ def total_amps_actual_all_twcs():
     return totalAmps
 
 
-def car_api_available(email = None, password = None, charge = None):
+def car_api_available(email=None, password=None, charge=None):
     global debugLevel, carApiLastErrorTime, carApiErrorRetryMins, \
-           carApiTransientErrors, carApiBearerToken, carApiRefreshToken, \
-           carApiTokenExpireTime, carApiVehicles
+        carApiTransientErrors, carApiBearerToken, carApiRefreshToken, \
+        carApiTokenExpireTime, carApiVehicles
 
     now = time.time()
     apiResponseDict = {}
@@ -707,17 +723,17 @@ def car_api_available(email = None, password = None, charge = None):
         # days when first issued, so we'll get a new token every 15 days.
         if(carApiRefreshToken != ''):
             cmd = 'curl -s -m 60 -X POST -H "accept: application/json" -H "Content-Type: application/json" -d \'' + \
-                  json.dumps({'grant_type': 'refresh_token', \
-                              'client_id': '81527cff06843c8634fdc09e8ac0abefb46ac849f38fe1e431c2ef2106796384', \
-                              'client_secret': 'c7257eb71a564034f9419ee651c7d0e5f7aa6bfbd18bafb5c5c033b093bb2fa3', \
-                              'refresh_token': carApiRefreshToken }) + \
+                  json.dumps({'grant_type': 'refresh_token',
+                              'client_id': '81527cff06843c8634fdc09e8ac0abefb46ac849f38fe1e431c2ef2106796384',
+                              'client_secret': 'c7257eb71a564034f9419ee651c7d0e5f7aa6bfbd18bafb5c5c033b093bb2fa3',
+                              'refresh_token': carApiRefreshToken}) + \
                   '\' "https://owner-api.teslamotors.com/oauth/token"'
         elif(email != None and password != None):
             cmd = 'curl -s -m 60 -X POST -H "accept: application/json" -H "Content-Type: application/json" -d \'' + \
-                  json.dumps({'grant_type': 'password', \
-                              'client_id': '81527cff06843c8634fdc09e8ac0abefb46ac849f38fe1e431c2ef2106796384', \
-                              'client_secret': 'c7257eb71a564034f9419ee651c7d0e5f7aa6bfbd18bafb5c5c033b093bb2fa3', \
-                              'email': email, 'password': password }) + \
+                  json.dumps({'grant_type': 'password',
+                              'client_id': '81527cff06843c8634fdc09e8ac0abefb46ac849f38fe1e431c2ef2106796384',
+                              'client_secret': 'c7257eb71a564034f9419ee651c7d0e5f7aa6bfbd18bafb5c5c033b093bb2fa3',
+                              'email': email, 'password': password}) + \
                   '\' "https://owner-api.teslamotors.com/oauth/token"'
 
         if(cmd != None):
@@ -875,18 +891,18 @@ def car_api_available(email = None, password = None, charge = None):
                             # to wake after the first wake_up, but it may take
                             # awhile to finish waking up. Therefore, we try
                             # waking every 30 seconds for the first 10 mins.
-                            vehicle.delayNextWakeAttempt = 30;
+                            vehicle.delayNextWakeAttempt = 30
                         elif(now - vehicle.firstWakeAttemptTime <= 70*60):
                             # Cars in 'asleep' state should wake within a
                             # couple minutes in my experience, so we should
                             # never reach this point. If we do, try every 5
                             # minutes for the next hour.
-                            vehicle.delayNextWakeAttempt = 5*60;
+                            vehicle.delayNextWakeAttempt = 5*60
                         else:
                             # Car hasn't woken for an hour and 10 mins. Try
                             # again in 15 minutes. We'll show an error about
                             # reaching this point later.
-                            vehicle.delayNextWakeAttempt = 15*60;
+                            vehicle.delayNextWakeAttempt = 15*60
                     elif(state == 'offline'):
                         if(now - vehicle.firstWakeAttemptTime <= 31*60):
                             # A car in offline state is presumably not connected
@@ -902,7 +918,7 @@ def car_api_available(email = None, password = None, charge = None):
                             # tests but I can't be sure the car stays awake for
                             # 30secs or if I just happened to send a command
                             # during a shorter period of wakefulness.
-                            vehicle.delayNextWakeAttempt = 25;
+                            vehicle.delayNextWakeAttempt = 25
 
                             # I've run tests sending wake_up every 10-30 mins to
                             # a car in offline state and it will go hours
@@ -945,37 +961,37 @@ def car_api_available(email = None, password = None, charge = None):
                                 # it's worth re-trying in 1 minute rather than
                                 # waiting 5 minutes for retry in the standard
                                 # error handler.
-                                vehicle.delayNextWakeAttempt = 60;
+                                vehicle.delayNextWakeAttempt = 60
                             else:
                                 # We're in an unexpected state. This could be caused
                                 # by the API servers being down, car being out of
                                 # range, or by something I can't anticipate. Try
                                 # waking the car every 5 mins.
-                                vehicle.delayNextWakeAttempt = 5*60;
+                                vehicle.delayNextWakeAttempt = 5*60
                         else:
                             # Car hasn't woken for over an hour. Try again
                             # in 15 minutes. We'll show an error about this
                             # later.
-                            vehicle.delayNextWakeAttempt = 15*60;
+                            vehicle.delayNextWakeAttempt = 15*60
 
                     if(debugLevel >= 1):
                         if(state == 'error'):
-                            print(time_now() + ": Car API wake car failed with unknown response.  " \
-                                "Will try again in "
-                                + str(vehicle.delayNextWakeAttempt) + " seconds.")
+                            print(time_now() + ": Car API wake car failed with unknown response.  "
+                                  "Will try again in "
+                                  + str(vehicle.delayNextWakeAttempt) + " seconds.")
                         else:
                             print(time_now() + ": Car API wake car failed.  State remains: '"
-                                + state + "'.  Will try again in "
-                                + str(vehicle.delayNextWakeAttempt) + " seconds.")
+                                  + state + "'.  Will try again in "
+                                  + str(vehicle.delayNextWakeAttempt) + " seconds.")
 
                 if(vehicle.firstWakeAttemptTime > 0
                    and now - vehicle.firstWakeAttemptTime > 60*60):
                     # It should never take over an hour to wake a car.  If it
                     # does, ask user to report an error.
                     print(time_now() + ": ERROR: We have failed to wake a car from '"
-                        + state + "' state for %.1f hours.\n" \
-                          "Please private message user CDragon at " \
-                          "http://teslamotorsclub.com with a copy of this error. " \
+                          + state + "' state for %.1f hours.\n"
+                          "Please private message user CDragon at "
+                          "http://teslamotorsclub.com with a copy of this error. "
                           "Also include this: %s" % (
                           ((now - vehicle.firstWakeAttemptTime) / 60 / 60),
                           str(apiResponseDict)))
@@ -983,8 +999,8 @@ def car_api_available(email = None, password = None, charge = None):
     if(now - carApiLastErrorTime < carApiErrorRetryMins*60 or carApiBearerToken == ''):
         if(debugLevel >= 8):
             print(time_now() + ": car_api_available returning False because of recent carApiLasterrorTime "
-                + str(now - carApiLastErrorTime) + " or empty carApiBearerToken '"
-                + carApiBearerToken + "'")
+                  + str(now - carApiLastErrorTime) + " or empty carApiBearerToken '"
+                  + carApiBearerToken + "'")
         return False
 
     if(debugLevel >= 8):
@@ -1002,16 +1018,17 @@ def car_api_available(email = None, password = None, charge = None):
         # quickly after we send wake_up.  I haven't seen a problem sending a
         # command immediately, but it seems safest to sleep 5 seconds after
         # waking before sending a command.
-        time.sleep(5);
+        time.sleep(5)
 
     return True
+
 
 def car_api_charge(charge):
     # Do not call this function directly.  Call by using background thread:
     # queue_background_task({'cmd':'charge', 'charge':<True/False>})
     global debugLevel, carApiLastErrorTime, carApiErrorRetryMins, \
-           carApiTransientErrors, carApiVehicles, carApiLastStartOrStopChargeTime, \
-           homeLat, homeLon, onlyChargeMultiCarsAtHome
+        carApiTransientErrors, carApiVehicles, carApiLastStartOrStopChargeTime, \
+        homeLat, homeLon, onlyChargeMultiCarsAtHome
 
     now = time.time()
     apiResponseDict = {}
@@ -1027,7 +1044,7 @@ def car_api_charge(charge):
             print(time_now() + ': car_api_charge return because under 60 sec since last carApiLastStartOrStopChargeTime')
         return 'error'
 
-    if(car_api_available(charge = charge) == False):
+    if(car_api_available(charge=charge) == False):
         if(debugLevel >= 8):
             print(time_now() + ': car_api_charge return because car_api_available() == False')
         return 'error'
@@ -1061,9 +1078,9 @@ def car_api_charge(charge):
             if(homeLat == 10000):
                 if(debugLevel >= 1):
                     print(time_now() + ": Home location for vehicles has never been set.  " +
-                        "We'll assume home is where we found the first vehicle currently parked.  " +
-                        "Home set to lat=" + str(vehicle.lat) + ", lon=" +
-                        str(vehicle.lon))
+                          "We'll assume home is where we found the first vehicle currently parked.  " +
+                          "Home set to lat=" + str(vehicle.lat) + ", lon=" +
+                          str(vehicle.lon))
                 homeLat = vehicle.lat
                 homeLon = vehicle.lon
                 save_settings()
@@ -1114,7 +1131,7 @@ def car_api_charge(charge):
 
             try:
                 if(debugLevel >= 4):
-                    print(time_now() + ': Car API ' + startOrStop + \
+                    print(time_now() + ': Car API ' + startOrStop +
                           ' charge response', apiResponseDict, '\n')
                 # Responses I've seen in apiResponseDict:
                 # Car is done charging:
@@ -1203,7 +1220,7 @@ def car_api_charge(charge):
                                 # carApiErrorRetryMins mins before trying again.
                                 print(time_now() + ': ERROR "' + reason + '" when trying to ' +
                                       startOrStop + ' car charging via Tesla car API.  Will try again later.' +
-                                      "\nIf this error persists, please private message user CDragon at http://teslamotorsclub.com " \
+                                      "\nIf this error persists, please private message user CDragon at http://teslamotorsclub.com "
                                       "with a copy of this error.")
                                 result = 'error'
                                 vehicle.lastErrorTime = now
@@ -1254,10 +1271,10 @@ def background_tasks_thread():
         elif(task['cmd'] == 'carApiEmailPassword'):
             carApiLastErrorTime = 0
             car_api_available(task['email'], task['password'])
-        elif(task['cmd'] == 'checkGreenEnergy'):
-            check_green_energy()
         elif(task['cmd'] == 'checkUtilityFuseCurrent'):
-             check_utility_fuse_current()
+            check_utility_fuse_current()
+#        elif(task['cmd'] == 'checkGreenEnergy'): # not used in this fork
+#            check_green_energy()
 
         # Delete task['cmd'] from backgroundTasksCmds such that
         # queue_background_task() can queue another task['cmd'] in the future.
@@ -1268,77 +1285,12 @@ def background_tasks_thread():
         # in the queue are done.
         backgroundTasksQueue.task_done()
 
-def check_green_energy():
-    global debugLevel, maxAmpsToDivideAmongSlaves, greenEnergyAmpsOffset, \
-           minAmpsPerTWC, backgroundTasksLock
-
-    # I check solar panel generation using an API exposed by The
-    # Energy Detective (TED). It's a piece of hardware available
-    # at http://www. theenergydetective.com
-    # You may also be able to find a way to query a solar system
-    # on the roof using an API provided by your solar installer.
-    # Most of those systems only update the amount of power the
-    # system is producing every 15 minutes at most, but that's
-    # fine for tweaking your car charging.
-    #
-    # In the worst case, you could skip finding realtime green
-    # energy data and simply direct the car to charge at certain
-    # rates at certain times of day that typically have certain
-    # levels of solar or wind generation. To do so, use the hour
-    # and min variables as demonstrated just above this line:
-    #   backgroundTasksQueue.put({'cmd':'checkGreenEnergy')
-    #
-    # The curl command used below can be used to communicate
-    # with almost any web API, even ones that require POST
-    # values or authentication. The -s option prevents curl from
-    # displaying download stats. -m 60 prevents the whole
-    # operation from taking over 60 seconds.
-    greenEnergyData = run_process('curl -s -m 60 "http://192.168.13.58/history/export.csv?T=1&D=0&M=1&C=1"')
-
-    # In case, greenEnergyData will contain something like this:
-    #   MTU, Time, Power, Cost, Voltage
-    #   Solar,11/11/2017 14:20:43,-2.957,-0.29,124.3
-    # The only part we care about is -2.957 which is negative
-    # kW currently being generated. When 0kW is generated, the
-    # negative disappears so we make it optional in the regex
-    # below.
-    m = re.search(b'^Solar,[^,]+,-?([^, ]+),', greenEnergyData, re.MULTILINE)
-    if(m):
-        solarW = int(float(m.group(1)) * 1000)
-
-        # Use backgroundTasksLock to prevent changing maxAmpsToDivideAmongSlaves
-        # if the main thread is in the middle of examining and later using
-        # that value.
-        backgroundTasksLock.acquire()
-
-        # Watts = Volts * Amps
-        # Car charges at 240 volts in North America so we figure
-        # out how many amps * 240 = solarW and limit the car to
-        # that many amps.
-        maxAmpsToDivideAmongSlaves = (solarW / 240) + \
-                                      greenEnergyAmpsOffset
-
-        if(debugLevel >= 1):
-            print("%s: Solar generating %dW so limit car charging to:\n" \
-                 "          %.2fA + %.2fA = %.2fA.  Charge when above %.0fA (minAmpsPerTWC)." % \
-                 (time_now(), solarW, (solarW / 240),
-                 greenEnergyAmpsOffset, maxAmpsToDivideAmongSlaves,
-                 minAmpsPerTWC))
-
-        backgroundTasksLock.release()
-    else:
-        print(time_now() +
-            " ERROR: Can't determine current solar generation from:\n" +
-            str(greenEnergyData))
-
-
-
-
 
 def check_utility_fuse_current():
     global debugLevel, backgroundTasksLock, maxAmpsMains, \
-           leftOverAmpsForAllTWCs, avgMainsAmps
+        leftOverAmpsForAllTWCs, avgMainsAmps
 
+    now = time.time()
     # Check how many amps are measured at the utility mains to protect the main fuse of your house.
     # We want to reduce the charging current if we are using more than the main fuse rating.
 
@@ -1348,19 +1300,17 @@ def check_utility_fuse_current():
     # http://lechacalshop.com/gb/internetofthing/63-rpizct3v1.html
 
     # The current measure shield could be on the same Raspberry Pi as TWCmanager
-    # if TWC and mains connection are far away from each other it is possible to use two 
+    # if TWC and mains connection are far away from each other it is possible to use two
     # raspberry pi connected to the same network and connecting with a socket
 
     # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
-      # run $ sudo raspi-config 
-      # Select Interfacing Options / Serial 
-      # then specify if you want a Serial console (no) 
-      # then if you want the Serial Port hardware enabled (yes). 
-      # Then use /dev/serial0 in any code which accesses the Serial Port.
-      # $ sudo apt-get install python-serial
-      # $ sudo shutdown -r now
-
-
+    # run $ sudo raspi-config
+    # Select Interfacing Options / Serial
+    # then specify if you want a Serial console (no)
+    # then if you want the Serial Port hardware enabled (yes).
+    # Then use /dev/serial0 in any code which accesses the Serial Port.
+    # $ sudo apt-get install python-serial
+    # $ sudo shutdown -r now
 
     # Serial Output of the current measure print:
     # NodeID Realpower1 ApparentPower1 Irms1 Vrms1 PowerFactor1 Realpower2 ApparentPower2 Irms2 Vrms2 PowerFactor2 Realpower3 ApparentPower3 Irms3 Vrms3 PowerFactor3
@@ -1383,11 +1333,6 @@ def check_utility_fuse_current():
     # mains[14] Vrms L3
     # mains[15] PowerFactor L3
 
-
-    # create empty list
-    MainsAmpsPhases = [0] * 3
-
-
     # socket client
     # get data from the Raspberry pi running socket-server.py (the pi with the utility current measure print)
 
@@ -1395,54 +1340,132 @@ def check_utility_fuse_current():
     PORT = 65432           # The port used by the server
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(2)
+        s.settimeout(1)
         s.connect((HOST, PORT))
         s.sendall(b'client asking for data')
         serial_line = s.recv(1024).decode()
 
+        serial_line = serial_line[:-2]  # Remove the trailing carriage return serial_line feed
 
-        serial_line = serial_line[:-2] # Remove the trailing carriage return serial_line feed
-        
-        if(debugLevel >= 10):
+        if(debugLevel >= 12):
             print('Received from socket server: ', str(serial_line))
-        
-        mains = serial_line.split(' ') # Split the string at each space and create a list of the data
 
+        # Split the string at each space and create a list of the data
+        mains = serial_line.split(' ')
+
+    #MainsAmpsPhases = [0] * 3
 
     if(len(mains) >= 15):
-#        backgroundTasksLock.acquire()
-        
+
         # We're only interested in the three current measurements
         # put the L1, L2 & L3 Amps in a list
         # consumed power is expected to be a positive value!
-        MainsAmpsPhases[0] = mains[3]
-        MainsAmpsPhases[1] = mains[8]
-        MainsAmpsPhases[2] = mains[13]
+        # and solar power sent back to the grid sould be negative values!
+        MainsAmpsPhases = [float(mains[3]), float(mains[8]), float(mains[13])]
+        #MainsAmpsPhases[0] = float(mains[3])
+        #MainsAmpsPhases[1] = float(mains[8])
+        #MainsAmpsPhases[2] = float(mains[13])
 
+        # delete the mains list after we copied the values we need
+        # to make sure we don't use this reading again.
+        del mains[:]
 
-        maxMainsAmps = max(MainsAmpsPhases)
-        # maxMainsAmps = sum(maxMainsList) / len(maxMainsList)
+        global lastMaxMainsAmps, maxMainsSample, totalAmpsActualAllTWCsSample, leftOverAmpsForAllTWCsList
+        try:
+            lastMaxMainsAmps
+        except NameError:
+            lastMaxMainsAmps = 0
+            maxMainsSample = []
+            totalAmpsActualAllTWCsSample = []
+            leftOverAmpsForAllTWCsList = []
+            if(debugLevel >= 12):
+                print("variable not declared")
 
-  
+        # to make the charging current changing a bit les agressive we use an average
+        # A small current spike should not trigger the main fuse.
+        # 1,1 x In for one hour // 1,5 x In for 10 min // 2 x In for 1 min // 3 x In for 10s // 10 x In for 0.1s
 
+        # Define how many samples are taken to calculate an average
+        mainsSampleLength = 4
+        # Define how many calculations are kept to use minimum of them
+        leftOverAmpsForAllTWCsListLength = 20
+
+        # get the phase with teh highest current which is the limit for all phases
+        # and add it to the samples list
+        maxMainsSample.append(max(MainsAmpsPhases))
+        # we do the same averageing with total_amps_actual_all_twcs
+        totalAmpsActualAllTWCsSample.append(total_amps_actual_all_twcs())
+
+        # remove oldest value in list (slice samples list to mainsSampleLength size)
+        maxMainsSample = maxMainsSample[-mainsSampleLength:]
+        totalAmpsActualAllTWCsSample = totalAmpsActualAllTWCsSample[-mainsSampleLength:]
+        #print(*maxMainsSample, sep = ", ")
+
+        # calculate average of the sample lists
+        maxMainsAmps = float(sum(maxMainsSample)) / len(maxMainsSample)
+        totalAmpsActualAllTWCs = float(sum(totalAmpsActualAllTWCsSample)) / len(totalAmpsActualAllTWCsSample)
 
         # calculate left over amps for all TWCs
-        leftOverAmpsForAllTWCs = float(maxAmpsMains) - float(maxMainsAmps) + float(total_amps_actual_all_twcs())
+        # and add it to the list of leftOverAmpsForAllTWCs calculations
+        leftOverAmpsForAllTWCsList.append(int(maxAmpsMains - maxMainsAmps + totalAmpsActualAllTWCs))
+        # use lowest value of the eftOverAmpsForAllTWCs calculations
+        leftOverAmpsForAllTWCsList = leftOverAmpsForAllTWCsList[-leftOverAmpsForAllTWCsListLength:]
+        if(debugLevel >= 12):
+            print("leftOverAmpsForAllTWCsList: ")
+            print(*leftOverAmpsForAllTWCsList, sep = ", ")
+        leftOverAmpsForAllTWCs = min(leftOverAmpsForAllTWCsList)
 
+        ##########################################################
+        # avgMainsAmps can be used instead of solar generation api
+        # We measure actual house mains current which shows us how
+        # much solar power is left for charging.
+        ##########################################################
+        global avgMainsList, avgMainsAmpsChangeTime
+        try:
+            avgMainsList
+        except NameError:
+            avgMainsList = []
+            avgMainsAmpsChangeTime = 0
+
+        # calculate average of all phases and insert at end of the list
+        avgMainsList.append(float(sum(MainsAmpsPhases)) / len(MainsAmpsPhases))
+
+        # remove oldest value in list (slice list to AvgMainsListLength size)
+        # AvgMainsListLength = 60
+        # avgMainsList = avgMainsList[-AvgMainsListLength:]
+
+        # calculate average of the list and change avgMainsAmps every 5 minuts
+        if(now - avgMainsAmpsChangeTime > 60*5 or avgMainsAmps == 0):
+            avgMainsAmps = float(sum(avgMainsList)) / len(avgMainsList)
+            if(debugLevel >= 12):
+                print("new avgMainsAmps calculated ")
+            del avgMainsList[:]
+            avgMainsAmpsChangeTime = now
 
         if(debugLevel >= 8):
-            print(time_now() +
-              " Amps L1 " + str(MainsAmpsPhases[0]) +
-              " Amps L2 " + str(MainsAmpsPhases[1]) +
-              " Amps L3 " + str(MainsAmpsPhases[2]) +
-              " max mains Amps " + str(maxMainsAmps) +
-              " leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
+            print(" L1: " + str(MainsAmpsPhases[0]) + "A" +
+                  " L2: " + str(MainsAmpsPhases[1]) + "A" +
+                  " L3: " + str(MainsAmpsPhases[2]) + "A" +
+                  "\n averaged max mains Amps: " + str(round(maxMainsAmps, 2)) +
+                  "\n lowest leftOverAmpsForAllTWCs in list: " + str(leftOverAmpsForAllTWCs) +
+                  "\n last average mains Amps: " + str(round(avgMainsAmps, 2)) +
+                  "\n since last average update: " + str(round((now - avgMainsAmpsChangeTime) / 60, 1)) + " min" )
 
 
 
+    else:
+        print(time_now() +
+              " ERROR: Can't connect to utility mains current sensor! ")
 
+#        del avgMainsList[:]
+        del mains[:]
 
+        #  if utility current measurement fails use no solar tracking
+        avgMainsAmps = 0
 
+        # if utility current measurement fails use 12A as limmit
+        # this is not really save but for me it's more inmportant that the car keeps charging at a low amperage.
+        leftOverAmpsForAllTWCs = 12
 
 
 #
@@ -1479,8 +1502,8 @@ class CarApiVehicle:
             # generated an error on this vehicle. Return that car is not ready.
             if(debugLevel >= 8):
                 print(time_now() + ': Vehicle ' + str(self.ID)
-                    + ' not ready because of recent lastErrorTime '
-                    + str(self.lastErrorTime))
+                      + ' not ready because of recent lastErrorTime '
+                      + str(self.lastErrorTime))
             return False
 
         if(self.firstWakeAttemptTime == 0 and time.time() - self.lastWakeAttemptTime < 2*60):
@@ -1492,7 +1515,7 @@ class CarApiVehicle:
 
         if(debugLevel >= 8):
             print(time_now() + ': Vehicle ' + str(self.ID)
-                + " not ready because it wasn't woken in the last 2 minutes.")
+                  + " not ready because it wasn't woken in the last 2 minutes.")
         return False
 
     def update_location(self):
@@ -1561,7 +1584,7 @@ class CarApiVehicle:
                 # apiResponseDict['response'] when 'response' doesn't exist in
                 # apiResponseDict.
                 if(debugLevel >= 1):
-                    print(time_now() + ": ERROR: Can't get GPS location of vehicle " + str(self.ID) + \
+                    print(time_now() + ": ERROR: Can't get GPS location of vehicle " + str(self.ID) +
                           ".  Will try again later.")
                 self.lastErrorTime = time.time()
                 return False
@@ -1573,7 +1596,6 @@ class CarApiVehicle:
 # End CarApiVehicle class
 #
 ##############################
-
 
 
 ##############################
@@ -1628,10 +1650,10 @@ class TWCSlave:
         try:
             debugOutput = ": SHB %02X%02X: %02X %05.2f/%05.2fA %02X%02X" % \
                 (self.TWCID[0], self.TWCID[1], heartbeatData[0],
-                (((heartbeatData[3] << 8) + heartbeatData[4]) / 100),
-                (((heartbeatData[1] << 8) + heartbeatData[2]) / 100),
-                heartbeatData[5], heartbeatData[6]
-                )
+                 (((heartbeatData[3] << 8) + heartbeatData[4]) / 100),
+                 (((heartbeatData[1] << 8) + heartbeatData[2]) / 100),
+                 heartbeatData[5], heartbeatData[6]
+                 )
             if(self.protocolVersion == 2):
                 debugOutput += (" %02X%02X" % (heartbeatData[7], heartbeatData[8]))
             debugOutput += "  M"
@@ -1640,13 +1662,13 @@ class TWCSlave:
                 debugOutput += " %02X%02X" % (masterTWCID[0], masterTWCID[1])
 
             debugOutput += ": %02X %05.2f/%05.2fA %02X%02X" % \
-                    (self.masterHeartbeatData[0],
-                    (((self.masterHeartbeatData[3] << 8) + self.masterHeartbeatData[4]) / 100),
+                (self.masterHeartbeatData[0],
+                 (((self.masterHeartbeatData[3] << 8) + self.masterHeartbeatData[4]) / 100),
                     (((self.masterHeartbeatData[1] << 8) + self.masterHeartbeatData[2]) / 100),
                     self.masterHeartbeatData[5], self.masterHeartbeatData[6])
             if(self.protocolVersion == 2):
                 debugOutput += (" %02X%02X" %
-                    (self.masterHeartbeatData[7], self.masterHeartbeatData[8]))
+                                (self.masterHeartbeatData[7], self.masterHeartbeatData[8]))
 
             # Only output once-per-second heartbeat debug info when it's
             # different from the last output or if the only change has been amps
@@ -1683,7 +1705,8 @@ class TWCSlave:
                 print(time_now() + ': Error in print_status displaying heartbeatData',
                       heartbeatData, 'based on msg', hex_str(msg))
             if(len(self.masterHeartbeatData) != (7 if self.protocolVersion == 1 else 9)):
-                print(time_now() + ': Error in print_status displaying masterHeartbeatData', self.masterHeartbeatData)
+                print(time_now() + ': Error in print_status displaying masterHeartbeatData',
+                      self.masterHeartbeatData)
 
     def send_slave_heartbeat(self, masterID):
         # Send slave heartbeat
@@ -1824,7 +1847,8 @@ class TWCSlave:
                 # Increase array length to 9
                 slaveHeartbeatData.append(0x00)
 
-        send_msg(bytearray(b'\xFD\xE0') + fakeTWCID + bytearray(masterID) + bytearray(slaveHeartbeatData))
+        send_msg(bytearray(b'\xFD\xE0') + fakeTWCID +
+                 bytearray(masterID) + bytearray(slaveHeartbeatData))
 
     def send_master_heartbeat(self):
         # Send our fake master's heartbeat to this TWCSlave.
@@ -1851,11 +1875,11 @@ class TWCSlave:
         #                   Manual says this code means 'The networked Wall
         #                   Connectors have different maximum current
         #                   capabilities.'
-        #   	0000 1000 = No effect
-        #   	0001 0000 = No effect
-        #   	0010 0000 = No effect
-        #   	0100 0000 = No effect
-    	#       1000 0000 = No effect
+        #       0000 1000 = No effect
+        #       0001 0000 = No effect
+        #       0010 0000 = No effect
+        #       0100 0000 = No effect
+        #       1000 0000 = No effect
         #     When two bits are set, the lowest bit (rightmost bit) seems to
         #     take precedence (ie 111 results in 3 blinks, 110 results in 5
         #     blinks).
@@ -1922,7 +1946,7 @@ class TWCSlave:
         #                          (20.00A). 01 byte indicates Master is plugged
         #                          in to a car.)
         global fakeTWCID, overrideMasterHeartbeatData, debugLevel, \
-               timeLastTx, carApiVehicles
+            timeLastTx, carApiVehicles
 
         if(len(overrideMasterHeartbeatData) >= 7):
             self.masterHeartbeatData = overrideMasterHeartbeatData
@@ -1941,13 +1965,13 @@ class TWCSlave:
                 # them both from charging.  If the away vehicle is not currently
                 # charging, I'm not sure if this would prevent it from charging
                 # when next plugged in.
-                queue_background_task({'cmd':'charge', 'charge':False})
+                queue_background_task({'cmd': 'charge', 'charge': False})
             elif(self.lastAmpsOffered >= 5.0 and self.reportedAmpsActual < 2.0
                  and self.reportedState != 0x02
-            ):
+                 ):
                 # Car is not charging and is not reporting an error state, so
                 # try starting charge via car api.
-                queue_background_task({'cmd':'charge', 'charge':True})
+                queue_background_task({'cmd': 'charge', 'charge': True})
             elif(self.reportedAmpsActual > 4.0):
                 # At least one plugged in car is successfully charging. We don't
                 # know which car it is, so we must set
@@ -1964,15 +1988,14 @@ class TWCSlave:
         send_msg(bytearray(b'\xFB\xE0') + fakeTWCID + bytearray(self.TWCID)
                  + bytearray(self.masterHeartbeatData))
 
-
     def receive_slave_heartbeat(self, heartbeatData):
         # Handle heartbeat message received from real slave TWC.
         global debugLevel, nonScheduledAmpsMax, \
-               maxAmpsToDivideAmongSlaves, wiringMaxAmpsAllTWCs, \
-               timeLastGreenEnergyCheck, greenEnergyAmpsOffset, \
-               slaveTWCRoundRobin, spikeAmpsToCancel6ALimit, \
-               chargeNowAmps, chargeNowTimeEnd, minAmpsPerTWC, \
-               leftOverAmpsForAllTWCs, avgMainsAmps
+            maxAmpsToDivideAmongSlaves, wiringMaxAmpsAllTWCs, \
+            timeLastGreenEnergyCheck, greenEnergyAmpsOffset, \
+            slaveTWCRoundRobin, spikeAmpsToCancel6ALimit, \
+            chargeNowAmps, chargeNowTimeEnd, minAmpsPerTWC, \
+            leftOverAmpsForAllTWCs, avgMainsAmps
 
         now = time.time()
         self.timeLastRx = now
@@ -1993,7 +2016,7 @@ class TWCSlave:
         # still set to its initial value of -1.
         if(self.reportedAmpsActualSignificantChangeMonitor < 0
            or abs(self.reportedAmpsActual - self.reportedAmpsActualSignificantChangeMonitor) > 0.8
-        ):
+           ):
             self.timeReportedAmpsActualChangedSignificantly = now
             self.reportedAmpsActualSignificantChangeMonitor = self.reportedAmpsActual
 
@@ -2006,21 +2029,29 @@ class TWCSlave:
         # Check if it's time to resume tracking green energy.
         if(nonScheduledAmpsMax != -1 and hourResumeTrackGreenEnergy > -1
            and hourResumeTrackGreenEnergy == hourNow
-        ):
+           ):
             nonScheduledAmpsMax = -1
             save_settings()
+
+        # Check how many amps are measured at the utility mains fuse to reduce charging current
+        # if necessary to protect the main fuses.
+
+        # run check_utility_fuse_current function in background task >>>
+        # queue_background_task({'cmd':'checkUtilityFuseCurrent'})
+        # or maybe run function directly >>> check_utility_fuse_current()
+        check_utility_fuse_current()
 
         # Check if we're within the hours we must use scheduledAmpsMax instead
         # of nonScheduledAmpsMax
         blnUseScheduledAmps = 0
         if(scheduledAmpsMax > 0
-             and
+           and
            scheduledAmpsStartHour > -1
-             and
+           and
            scheduledAmpsEndHour > -1
-             and
+           and
            scheduledAmpsDaysBitmap > 0
-        ):
+           ):
             if(scheduledAmpsStartHour > scheduledAmpsEndHour):
                 # We have a time like 8am to 7am which we must interpret as the
                 # 23-hour period after 8am or before 7am. Since this case always
@@ -2031,26 +2062,26 @@ class TWCSlave:
                 # 11:59pm, and on Tuesday at 12am to Tuesday at 6:59am.
                 if(
                    (
-                     hourNow >= scheduledAmpsStartHour
+                       hourNow >= scheduledAmpsStartHour
                        and
-                     (scheduledAmpsDaysBitmap & (1 << ltNow.tm_wday))
+                       (scheduledAmpsDaysBitmap & (1 << ltNow.tm_wday))
                    )
-                     or
+                   or
                    (
-                     hourNow < scheduledAmpsEndHour
+                       hourNow < scheduledAmpsEndHour
                        and
-                     (scheduledAmpsDaysBitmap & (1 << yesterday))
+                       (scheduledAmpsDaysBitmap & (1 << yesterday))
                    )
-                ):
-                   blnUseScheduledAmps = 1
+                   ):
+                    blnUseScheduledAmps = 1
             else:
                 # We have a time like 7am to 8am which we must interpret as the
                 # 1-hour period between 7am and 8am.
                 if(hourNow >= scheduledAmpsStartHour
                    and hourNow < scheduledAmpsEndHour
                    and (scheduledAmpsDaysBitmap & (1 << ltNow.tm_wday))
-                ):
-                   blnUseScheduledAmps = 1
+                   ):
+                    blnUseScheduledAmps = 1
 
         if(chargeNowTimeEnd > 0 and chargeNowTimeEnd < now):
             # We're beyond the one-day period where we want to charge at
@@ -2081,32 +2112,31 @@ class TWCSlave:
                 if(ltNow.tm_hour < 6 or ltNow.tm_hour >= 20):
                     maxAmpsToDivideAmongSlaves = 0
                 else:
-                    #queue_background_task({'cmd':'checkGreenEnergy'})
+                    # we use the current at the utility main fuse insted of the solar generation api checkGreenEnergy uses
+                    # queue_background_task({'cmd':'checkGreenEnergy'})
+
+                    # queue_background_task({'cmd':'checkUtilityFuseCurrent'})
+                    # avgMainsAmps is calculated by check_utility_fuse_current() in the background.
+                    # avgMainsAmps is an average of all 3 phases
+                    # One phase could actually export energy while an other imports from the grid.
+                    # But we just use an average because we cant control the charging current for each phase.
+                    if(avgMainsAmps < (-1 * minAmpsPerTWC)):
+                        maxAmpsToDivideAmongSlaves = -1 * avgMainsAmps
 
         # Use backgroundTasksLock to prevent the background thread from changing
         # the value of maxAmpsToDivideAmongSlaves after we've checked the value
         # is safe to use but before we've used it.
-        
-        # run check_utility_fuse_current function in background task >>>
-        #queue_background_task({'cmd':'checkUtilityFuseCurrent'})
-        # or maybe run function directly
-        check_utility_fuse_current()
-
-        backgroundTasksLock.acquire()
+#        backgroundTasksLock.acquire()
 
         if(maxAmpsToDivideAmongSlaves > wiringMaxAmpsAllTWCs):
             # Never tell the slaves to draw more amps than the physical charger
             # wiring can handle.
             if(debugLevel >= 1):
                 print(time_now() +
-                    " ERROR: maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
-                    " > wiringMaxAmpsAllTWCs " + str(wiringMaxAmpsAllTWCs) +
-                    ".\nSee notes above wiringMaxAmpsAllTWCs in the 'Configuration parameters' section.")
+                      " ERROR: maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
+                      " > wiringMaxAmpsAllTWCs " + str(wiringMaxAmpsAllTWCs) +
+                      ".\nSee notes above wiringMaxAmpsAllTWCs in the 'Configuration parameters' section.")
             maxAmpsToDivideAmongSlaves = wiringMaxAmpsAllTWCs
-
-#          
-        # Check how many amps are measured at the utility mains fuse to reduce charging current 
-        # if necessary to protect the main fuses.
 
 
         # leftOverAmpsForAllTWCs is calculated by check_utility_fuse_current() in the background.
@@ -2114,10 +2144,9 @@ class TWCSlave:
             # Never tell the slaves to draw more amps than the main fuse can handle.
             maxAmpsToDivideAmongSlaves = leftOverAmpsForAllTWCs
             if(debugLevel >= 1):
-                print(time_now() + 
-                  " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
-                  " limited by leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
-        
+                print(time_now() +
+                      " maxAmpsToDivideAmongSlaves " + str(maxAmpsToDivideAmongSlaves) +
+                      " limited by leftOverAmpsForAllTWCs " + str(leftOverAmpsForAllTWCs))
 
         # Determine how many cars are charging and how many amps they're using
         numCarsCharging = 1
@@ -2143,7 +2172,7 @@ class TWCSlave:
                   + " with " + str(numCarsCharging)
                   + " cars charging.")
 
-        backgroundTasksLock.release()
+#        backgroundTasksLock.release()
 
         minAmpsToOffer = minAmpsPerTWC
         if(self.minAmpsTWCSupports > minAmpsToOffer):
@@ -2211,83 +2240,83 @@ class TWCSlave:
                 desiredAmpsOffered = 0
 
             if(
-                   self.lastAmpsOffered > 0
-                     and
-                   (
-                     now - self.timeLastAmpsOfferedChanged < 60
-                       or
-                     now - self.timeReportedAmpsActualChangedSignificantly < 60
-                       or
-                     self.reportedAmpsActual < 4.0
-                   )
-                ):
-                    # We were previously telling the car to charge but now we want
-                    # to tell it to stop. However, it's been less than a minute
-                    # since we told it to charge or since the last significant
-                    # change in the car's actual power draw or the car has not yet
-                    # started to draw at least 5 amps (telling it 5A makes it
-                    # actually draw around 4.18-4.27A so we check for
-                    # self.reportedAmpsActual < 4.0).
-                    #
-                    # Once we tell the car to charge, we want to keep it going for
-                    # at least a minute before turning it off again. concern is that
-                    # yanking the power at just the wrong time during the
-                    # start-charge negotiation could put the car into an error state
-                    # where it won't charge again without being re-plugged. This
-                    # concern is hypothetical and most likely could not happen to a
-                    # real car, but I'd rather not take any chances with getting
-                    # someone's car into a non-charging state so they're stranded
-                    # when they need to get somewhere. Note that non-Tesla cars
-                    # using third-party adapters to plug in are at a higher risk of
-                    # encountering this sort of hypothetical problem.
-                    #
-                    # The other reason for this tactic is that in the minute we
-                    # wait, desiredAmpsOffered might rise above 5A in which case we
-                    # won't have to turn off the charger power at all. Avoiding too
-                    # many on/off cycles preserves the life of the TWC's main power
-                    # relay and may also prevent errors in the car that might be
-                    # caused by turning its charging on and off too rapidly.
-                    #
-                    # Seeing self.reportedAmpsActual < 4.0 means the car hasn't
-                    # ramped up to whatever level we told it to charge at last time.
-                    # It may be asleep and take up to 15 minutes to wake up, see
-                    # there's power, and start charging.
-                    #
-                    # Unfortunately, self.reportedAmpsActual < 4.0 can also mean the
-                    # car is at its target charge level and may not accept power for
-                    # days until the battery drops below a certain level. I can't
-                    # think of a reliable way to detect this case. When the car
-                    # stops itself from charging, we'll see self.reportedAmpsActual
-                    # drop to near 0.0A and heartbeatData[0] becomes 03, but we can
-                    # see the same 03 state when we tell the TWC to stop charging.
-                    # We could record the time the car stopped taking power and
-                    # assume it won't want more for some period of time, but we
-                    # can't reliably detect if someone unplugged the car, drove it,
-                    # and re-plugged it so it now needs power, or if someone plugged
-                    # in a different car that needs power. Even if I see the car
-                    # hasn't taken the power we've offered for the
-                    # last hour, it's conceivable the car will reach a battery state
-                    # where it decides it wants power the moment we decide it's safe
-                    # to stop offering it. Thus, I think it's safest to always wait
-                    # until the car has taken 5A for a minute before cutting power
-                    # even if that means the car will charge for a minute when you
-                    # first plug it in after a trip even at a time when no power
-                    # should be available.
-                    #
-                    # One advantage of the above situation is that whenever you plug
-                    # the car in, unless no power has been available since you
-                    # unplugged, the charge port will turn green and start charging
-                    # for a minute. This lets the owner quickly see that TWCManager
-                    # is working properly each time they return home and plug in.
-                    if(debugLevel >= 10):
-                        print("Don't stop charging yet because: " +
-                              'time - self.timeLastAmpsOfferedChanged ' +
-                              str(int(now - self.timeLastAmpsOfferedChanged)) +
-                              ' < 60 or time - self.timeReportedAmpsActualChangedSignificantly ' +
-                              str(int(now - self.timeReportedAmpsActualChangedSignificantly)) +
-                              ' < 60 or self.reportedAmpsActual ' + str(self.reportedAmpsActual) +
-                              ' < 4')
-                    desiredAmpsOffered = minAmpsToOffer
+                self.lastAmpsOffered > 0
+                and
+                (
+                    now - self.timeLastAmpsOfferedChanged < 60
+                    or
+                    now - self.timeReportedAmpsActualChangedSignificantly < 60
+                    or
+                    self.reportedAmpsActual < 4.0
+                )
+            ):
+                # We were previously telling the car to charge but now we want
+                # to tell it to stop. However, it's been less than a minute
+                # since we told it to charge or since the last significant
+                # change in the car's actual power draw or the car has not yet
+                # started to draw at least 5 amps (telling it 5A makes it
+                # actually draw around 4.18-4.27A so we check for
+                # self.reportedAmpsActual < 4.0).
+                #
+                # Once we tell the car to charge, we want to keep it going for
+                # at least a minute before turning it off again. concern is that
+                # yanking the power at just the wrong time during the
+                # start-charge negotiation could put the car into an error state
+                # where it won't charge again without being re-plugged. This
+                # concern is hypothetical and most likely could not happen to a
+                # real car, but I'd rather not take any chances with getting
+                # someone's car into a non-charging state so they're stranded
+                # when they need to get somewhere. Note that non-Tesla cars
+                # using third-party adapters to plug in are at a higher risk of
+                # encountering this sort of hypothetical problem.
+                #
+                # The other reason for this tactic is that in the minute we
+                # wait, desiredAmpsOffered might rise above 5A in which case we
+                # won't have to turn off the charger power at all. Avoiding too
+                # many on/off cycles preserves the life of the TWC's main power
+                # relay and may also prevent errors in the car that might be
+                # caused by turning its charging on and off too rapidly.
+                #
+                # Seeing self.reportedAmpsActual < 4.0 means the car hasn't
+                # ramped up to whatever level we told it to charge at last time.
+                # It may be asleep and take up to 15 minutes to wake up, see
+                # there's power, and start charging.
+                #
+                # Unfortunately, self.reportedAmpsActual < 4.0 can also mean the
+                # car is at its target charge level and may not accept power for
+                # days until the battery drops below a certain level. I can't
+                # think of a reliable way to detect this case. When the car
+                # stops itself from charging, we'll see self.reportedAmpsActual
+                # drop to near 0.0A and heartbeatData[0] becomes 03, but we can
+                # see the same 03 state when we tell the TWC to stop charging.
+                # We could record the time the car stopped taking power and
+                # assume it won't want more for some period of time, but we
+                # can't reliably detect if someone unplugged the car, drove it,
+                # and re-plugged it so it now needs power, or if someone plugged
+                # in a different car that needs power. Even if I see the car
+                # hasn't taken the power we've offered for the
+                # last hour, it's conceivable the car will reach a battery state
+                # where it decides it wants power the moment we decide it's safe
+                # to stop offering it. Thus, I think it's safest to always wait
+                # until the car has taken 5A for a minute before cutting power
+                # even if that means the car will charge for a minute when you
+                # first plug it in after a trip even at a time when no power
+                # should be available.
+                #
+                # One advantage of the above situation is that whenever you plug
+                # the car in, unless no power has been available since you
+                # unplugged, the charge port will turn green and start charging
+                # for a minute. This lets the owner quickly see that TWCManager
+                # is working properly each time they return home and plug in.
+                if(debugLevel >= 10):
+                    print("Don't stop charging yet because: " +
+                          'time - self.timeLastAmpsOfferedChanged ' +
+                          str(int(now - self.timeLastAmpsOfferedChanged)) +
+                          ' < 60 or time - self.timeReportedAmpsActualChangedSignificantly ' +
+                          str(int(now - self.timeReportedAmpsActualChangedSignificantly)) +
+                          ' < 60 or self.reportedAmpsActual ' + str(self.reportedAmpsActual) +
+                          ' < 4')
+                desiredAmpsOffered = minAmpsToOffer
         else:
             # We can tell the TWC how much power to use in 0.01A increments, but
             # the car will only alter its power in larger increments (somewhere
@@ -2300,7 +2329,7 @@ class TWCSlave:
 
             if(self.lastAmpsOffered == 0
                and now - self.timeLastAmpsOfferedChanged < 60
-            ):
+               ):
                 # Keep charger off for at least 60 seconds before turning back
                 # on. See reasoning above where I don't turn the charger off
                 # till it's been on at least 60 seconds.
@@ -2342,46 +2371,46 @@ class TWCSlave:
                     # If we just moved from a lower amp limit to
                     # a higher one less than spikeAmpsToCancel6ALimit.
                    (
-                     desiredAmpsOffered < spikeAmpsToCancel6ALimit
+                       desiredAmpsOffered < spikeAmpsToCancel6ALimit
                        and
-                     desiredAmpsOffered > self.lastAmpsOffered
+                       desiredAmpsOffered > self.lastAmpsOffered
                    )
-                      or
+                   or
                    (
-                     # ...or if we've been offering the car more amps than it's
-                     # been using for at least 10 seconds, then we'll change the
-                     # amps we're offering it. For some reason, the change in
-                     # amps offered will get the car to up its amp draw.
-                     #
-                     # First, check that the car is drawing enough amps to be
-                     # charging...
-                     self.reportedAmpsActual > 2.0
+                       # ...or if we've been offering the car more amps than it's
+                       # been using for at least 10 seconds, then we'll change the
+                       # amps we're offering it. For some reason, the change in
+                       # amps offered will get the car to up its amp draw.
+                       #
+                       # First, check that the car is drawing enough amps to be
+                       # charging...
+                       self.reportedAmpsActual > 2.0
                        and
-                     # ...and car is charging at under spikeAmpsToCancel6ALimit.
-                     # I think I've seen cars get stuck between spikeAmpsToCancel6ALimit
-                     # and lastAmpsOffered, but more often a car will be limited
-                     # to under lastAmpsOffered by its UI setting or by the
-                     # charger hardware it has on board, and we don't want to
-                     # keep reducing it to spikeAmpsToCancel6ALimit.
-                     # If cars really are getting stuck above
-                     # spikeAmpsToCancel6ALimit, I may need to implement a
-                     # counter that tries spikeAmpsToCancel6ALimit only a
-                     # certain number of times per hour.
-                     (self.reportedAmpsActual <= spikeAmpsToCancel6ALimit)
+                       # ...and car is charging at under spikeAmpsToCancel6ALimit.
+                       # I think I've seen cars get stuck between spikeAmpsToCancel6ALimit
+                       # and lastAmpsOffered, but more often a car will be limited
+                       # to under lastAmpsOffered by its UI setting or by the
+                       # charger hardware it has on board, and we don't want to
+                       # keep reducing it to spikeAmpsToCancel6ALimit.
+                       # If cars really are getting stuck above
+                       # spikeAmpsToCancel6ALimit, I may need to implement a
+                       # counter that tries spikeAmpsToCancel6ALimit only a
+                       # certain number of times per hour.
+                       (self.reportedAmpsActual <= spikeAmpsToCancel6ALimit)
                        and
-                     # ...and car is charging at over two amps under what we
-                     # want it to charge at. I have to use 2 amps because when
-                     # offered, say 40A, the car charges at ~38.76A actual.
-                     # Using a percentage instead of 2.0A doesn't work because
-                     # 38.58/40 = 95.4% but 5.14/6 = 85.6%
-                     (self.lastAmpsOffered - self.reportedAmpsActual) > 2.0
+                       # ...and car is charging at over two amps under what we
+                       # want it to charge at. I have to use 2 amps because when
+                       # offered, say 40A, the car charges at ~38.76A actual.
+                       # Using a percentage instead of 2.0A doesn't work because
+                       # 38.58/40 = 95.4% but 5.14/6 = 85.6%
+                       (self.lastAmpsOffered - self.reportedAmpsActual) > 2.0
                        and
-                     # ...and car hasn't changed its amp draw significantly in
-                     # over 10 seconds, meaning it's stuck at its current amp
-                     # draw.
-                     now - self.timeReportedAmpsActualChangedSignificantly > 10
+                       # ...and car hasn't changed its amp draw significantly in
+                       # over 10 seconds, meaning it's stuck at its current amp
+                       # draw.
+                       now - self.timeReportedAmpsActualChangedSignificantly > 10
                    )
-                ):
+                   ):
                     # We must set desiredAmpsOffered to a value that gets
                     # reportedAmpsActual (amps the car is actually using) up to
                     # a value near lastAmpsOffered. At the end of all these
@@ -2399,7 +2428,8 @@ class TWCSlave:
                         # The car limited itself to 6A indefinitely. In this
                         # case, the fix is to offer it lower amps.
                         if(debugLevel >= 1):
-                            print(time_now() + ': Car stuck when offered spikeAmpsToCancel6ALimit.  Offering 2 less.')
+                            print(
+                                time_now() + ': Car stuck when offered spikeAmpsToCancel6ALimit.  Offering 2 less.')
                         desiredAmpsOffered = spikeAmpsToCancel6ALimit - 2.0
                     elif(now - self.timeLastAmpsOfferedChanged > 5):
                         # self.lastAmpsOffered hasn't gotten the car to draw
@@ -2425,7 +2455,7 @@ class TWCSlave:
                     # 5 seconds to make sure the car sees it.
                     if(debugLevel >= 10):
                         print('Reduce amps: time - self.timeLastAmpsOfferedChanged ' +
-                            str(int(now - self.timeLastAmpsOfferedChanged)))
+                              str(int(now - self.timeLastAmpsOfferedChanged)))
                     if(now - self.timeLastAmpsOfferedChanged < 5):
                         desiredAmpsOffered = self.lastAmpsOffered
 
@@ -2460,21 +2490,21 @@ class TWCSlave:
         #   S 032e 0.25/0.00A: 03 0000 0019 0000 M: 05 0000 0000 0000
         if(self.reportedAmpsMax != desiredAmpsOffered
            or desiredAmpsOffered == 0
-        ):
+           ):
             desiredHundredthsOfAmps = int(desiredAmpsOffered * 100)
             self.masterHeartbeatData = bytearray([(0x09 if self.protocolVersion == 2 else 0x05),
-              (desiredHundredthsOfAmps >> 8) & 0xFF,
-              desiredHundredthsOfAmps & 0xFF,
-              0x00,0x00,0x00,0x00,0x00,0x00])
+                                                  (desiredHundredthsOfAmps >> 8) & 0xFF,
+                                                  desiredHundredthsOfAmps & 0xFF,
+                                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         else:
-            self.masterHeartbeatData = bytearray([0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00])
+            self.masterHeartbeatData = bytearray(
+                [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
 
         if(len(overrideMasterHeartbeatData) >= 7):
             self.masterHeartbeatData = overrideMasterHeartbeatData
 
         if(debugLevel >= 1):
             self.print_status(heartbeatData)
-
 
     def set_last_amps_offered(self, desiredAmpsOffered):
         # self.lastAmpsOffered should only be changed using this sub.
@@ -2491,14 +2521,14 @@ class TWCSlave:
             # Set totalAmpsAllTWCs to the total amps all TWCs are actually using
             # minus amps this TWC is using, plus amps this TWC wants to use.
             totalAmpsAllTWCs = total_amps_actual_all_twcs() \
-                  - self.reportedAmpsActual + self.lastAmpsOffered
+                - self.reportedAmpsActual + self.lastAmpsOffered
             if(totalAmpsAllTWCs > wiringMaxAmpsAllTWCs):
                 # totalAmpsAllTWCs would exceed wiringMaxAmpsAllTWCs if we
                 # allowed this TWC to use desiredAmpsOffered.  Instead, try
                 # offering as many amps as will increase total_amps_actual_all_twcs()
                 # up to wiringMaxAmpsAllTWCs.
                 self.lastAmpsOffered = int(wiringMaxAmpsAllTWCs -
-                                          (total_amps_actual_all_twcs() - self.reportedAmpsActual))
+                                           (total_amps_actual_all_twcs() - self.reportedAmpsActual))
 
                 if(self.lastAmpsOffered < self.minAmpsTWCSupports):
                     # Always offer at least minAmpsTWCSupports amps.
@@ -2506,9 +2536,9 @@ class TWCSlave:
                     # 'if(maxAmpsToDivideAmongSlaves / numCarsCharging > minAmpsToOffer):'
                     self.lastAmpsOffered = self.minAmpsTWCSupports
 
-                print("WARNING: Offering slave TWC %02X%02X %.1fA instead of " \
-                    "%.1fA to avoid overloading wiring shared by all TWCs." % (
-                    self.TWCID[0], self.TWCID[1], self.lastAmpsOffered, desiredAmpsOffered))
+                print("WARNING: Offering slave TWC %02X%02X %.1fA instead of "
+                      "%.1fA to avoid overloading wiring shared by all TWCs." % (
+                          self.TWCID[0], self.TWCID[1], self.lastAmpsOffered, desiredAmpsOffered))
 
             if(self.lastAmpsOffered > self.wiringMaxAmps):
                 # We reach this case frequently in some configurations, such as
@@ -2516,10 +2546,10 @@ class TWCSlave:
                 # an error.
                 self.lastAmpsOffered = self.wiringMaxAmps
                 if(debugLevel >= 10):
-                    print("Offering slave TWC %02X%02X %.1fA instead of " \
-                        "%.1fA to avoid overloading the TWC rated at %.1fA." % (
-                        self.TWCID[0], self.TWCID[1], self.lastAmpsOffered,
-                        desiredAmpsOffered, self.wiringMaxAmps))
+                    print("Offering slave TWC %02X%02X %.1fA instead of "
+                          "%.1fA to avoid overloading the TWC rated at %.1fA." % (
+                              self.TWCID[0], self.TWCID[1], self.lastAmpsOffered,
+                              desiredAmpsOffered, self.wiringMaxAmps))
 
             if(self.lastAmpsOffered != oldLastAmpsOffered):
                 self.timeLastAmpsOfferedChanged = time.time()
@@ -2545,7 +2575,7 @@ lastTWCResponseMsg = None
 overrideMasterHeartbeatData = b''
 
 masterTWCID = ''
-slaveHeartbeatData = bytearray([0x01,0x0F,0xA0,0x0F,0xA0,0x00,0x00,0x00,0x00])
+slaveHeartbeatData = bytearray([0x01, 0x0F, 0xA0, 0x0F, 0xA0, 0x00, 0x00, 0x00, 0x00])
 numInitMsgsToSend = 10
 msgRxCount = 0
 timeLastTx = 0
@@ -2602,7 +2632,7 @@ carApiVehicles = []
 # {'response': None, 'error_description': '',
 # 'error': 'operation_timedout for txid `4853e3ad74de12733f8cc957c9f60040`}'}
 carApiTransientErrors = ['upstream internal error', 'operation_timedout',
-'vehicle unavailable']
+                         'vehicle unavailable']
 
 # Define minutes between retrying non-transient errors.
 carApiErrorRetryMins = 10
@@ -2634,7 +2664,7 @@ load_settings()
 # Create a background thread to handle tasks that take too long on the main
 # thread.  For a primer on threads in Python, see:
 # http://www.laurentluce.com/posts/python-threads-synchronization-locks-rlocks-semaphores-conditions-events-and-queues/
-backgroundTasksThread = threading.Thread(target=background_tasks_thread, args = ())
+backgroundTasksThread = threading.Thread(target=background_tasks_thread, args=())
 backgroundTasksThread.daemon = True
 backgroundTasksThread.start()
 
@@ -2687,9 +2717,9 @@ if(webIPCqueue == None):
 # http://www.onlamp.com/pub/a/php/2004/05/13/shared_memory.html
 
 
-print("TWC Manager starting as fake %s with id %02X%02X and sign %02X" \
-    % ( ("Master" if fakeMaster else "Slave"), \
-    ord(fakeTWCID[0:1]), ord(fakeTWCID[1:2]), ord(slaveSign)))
+print("TWC Manager starting as fake %s with id %02X%02X and sign %02X"
+      % (("Master" if fakeMaster else "Slave"),
+         ord(fakeTWCID[0:1]), ord(fakeTWCID[1:2]), ord(slaveSign)))
 
 while True:
     try:
@@ -2714,11 +2744,11 @@ while True:
             # per 100ms so I do once per 100ms to get them over with.
             if(numInitMsgsToSend > 5):
                 send_master_linkready1()
-                time.sleep(0.1) # give slave time to respond
+                time.sleep(0.1)  # give slave time to respond
                 numInitMsgsToSend -= 1
             elif(numInitMsgsToSend > 0):
                 send_master_linkready2()
-                time.sleep(0.1) # give slave time to respond
+                time.sleep(0.1)  # give slave time to respond
                 numInitMsgsToSend = numInitMsgsToSend - 1
             else:
                 # After finishing the 5 startup linkready1 and linkready2
@@ -2739,10 +2769,10 @@ while True:
                             # awhile but we're just going to scratch the slave
                             # from our little black book and add them again if
                             # they ever send us a linkready.
-                            print(time_now() + ": WARNING: We haven't heard from slave " \
-                                "%02X%02X for over 26 seconds.  " \
-                                "Stop sending them heartbeat messages." % \
-                                (slaveTWC.TWCID[0], slaveTWC.TWCID[1]))
+                            print(time_now() + ": WARNING: We haven't heard from slave "
+                                  "%02X%02X for over 26 seconds.  "
+                                  "Stop sending them heartbeat messages." %
+                                  (slaveTWC.TWCID[0], slaveTWC.TWCID[1]))
                             delete_slave(slaveTWC.TWCID)
                         else:
                             slaveTWC.send_master_heartbeat()
@@ -2750,7 +2780,7 @@ while True:
                         idxSlaveToSendNextHeartbeat = idxSlaveToSendNextHeartbeat + 1
                         if(idxSlaveToSendNextHeartbeat >= len(slaveTWCRoundRobin)):
                             idxSlaveToSendNextHeartbeat = 0
-                        time.sleep(0.1) # give slave time to respond
+                        time.sleep(0.1)  # give slave time to respond
         else:
             # As long as a slave is running, it sends link ready messages every
             # 10 seconds. They trigger any master on the network to handshake
@@ -2764,12 +2794,11 @@ while True:
             # status updates.
             if(fakeMaster != 2 and time.time() - timeLastTx >= 10.0):
                 if(debugLevel >= 1):
-                    print("Advertise fake slave %02X%02X with sign %02X is " \
-                          "ready to link once per 10 seconds as long as master " \
-                          "hasn't sent a heartbeat in the last 10 seconds." % \
-                        (ord(fakeTWCID[0:1]), ord(fakeTWCID[1:2]), ord(slaveSign)))
+                    print("Advertise fake slave %02X%02X with sign %02X is "
+                          "ready to link once per 10 seconds as long as master "
+                          "hasn't sent a heartbeat in the last 10 seconds." %
+                          (ord(fakeTWCID[0:1]), ord(fakeTWCID[1:2]), ord(slaveSign)))
                 send_slave_linkready()
-
 
         ########################################################################
         # See if there's any message from the web interface.
@@ -2824,17 +2853,17 @@ while True:
                         # Send 1 if we need an email/password entered for car api, otherwise send 0
                         '`' + ('1' if needCarApiBearerToken else '0') +
                         '`' + str(len(slaveTWCRoundRobin))
-                        )
+                    )
 
                     for i in range(0, len(slaveTWCRoundRobin)):
                         webResponseMsg += (
                             '`' + "%02X%02X" % (slaveTWCRoundRobin[i].TWCID[0],
-                                                              slaveTWCRoundRobin[i].TWCID[1]) +
+                                                slaveTWCRoundRobin[i].TWCID[1]) +
                             '~' + str(slaveTWCRoundRobin[i].maxAmps) +
                             '~' + "%.2f" % (slaveTWCRoundRobin[i].reportedAmpsActual) +
                             '~' + str(slaveTWCRoundRobin[i].lastAmpsOffered) +
                             '~' + str(slaveTWCRoundRobin[i].reportedState)
-                            )
+                        )
 
                 elif(webMsg[0:20] == b'setNonScheduledAmps='):
                     m = re.search(b'([-0-9]+)', webMsg[19:len(webMsg)])
@@ -2845,7 +2874,7 @@ while True:
                         # isn't lost on power failure or script restart.
                         save_settings()
                 elif(webMsg[0:17] == b'setScheduledAmps='):
-                    m = re.search(b'([-0-9]+)\nstartTime=([-0-9]+):([0-9]+)\nendTime=([-0-9]+):([0-9]+)\ndays=([0-9]+)', \
+                    m = re.search(b'([-0-9]+)\nstartTime=([-0-9]+):([0-9]+)\nendTime=([-0-9]+):([0-9]+)\ndays=([0-9]+)',
                                   webMsg[17:len(webMsg)], re.MULTILINE)
                     if(m):
                         scheduledAmpsMax = int(m.group(1))
@@ -2862,7 +2891,7 @@ while True:
                     m = re.search(b'([0-9a-fA-F]+)', webMsg[11:len(webMsg)], re.MULTILINE)
                     if(m):
                         twcMsg = trim_pad(bytearray.fromhex(m.group(1).decode('ascii')),
-                                          15 if len(slaveTWCRoundRobin) == 0 \
+                                          15 if len(slaveTWCRoundRobin) == 0
                                           or slaveTWCRoundRobin[0].protocolVersion == 2 else 13)
                         if((twcMsg[0:2] == b'\xFC\x19') or (twcMsg[0:2] == b'\xFC\x1A')):
                             print("\n*** ERROR: Web interface requested sending command:\n"
@@ -2873,7 +2902,7 @@ while True:
                                   + hex_str(twcMsg)
                                   + "\nwhich could crash the TWC.  Aborting.\n")
                         else:
-                            lastTWCResponseMsg = bytearray();
+                            lastTWCResponseMsg = bytearray()
                             send_msg(twcMsg)
                 elif(webMsg == b'getLastTWCMsgResponse'):
                     if(lastTWCResponseMsg != None and lastTWCResponseMsg != b''):
@@ -2883,9 +2912,9 @@ while True:
                 elif(webMsg[0:20] == b'carApiEmailPassword='):
                     m = re.search(b'([^\n]+)\n([^\n]+)', webMsg[20:len(webMsg)], re.MULTILINE)
                     if(m):
-                        queue_background_task({'cmd':'carApiEmailPassword',
-                                                  'email':m.group(1).decode('ascii'),
-                                                  'password':m.group(2).decode('ascii')})
+                        queue_background_task({'cmd': 'carApiEmailPassword',
+                                               'email': m.group(1).decode('ascii'),
+                                               'password': m.group(2).decode('ascii')})
                 elif(webMsg[0:23] == b'setMasterHeartbeatData='):
                     m = re.search(b'([0-9a-fA-F]*)', webMsg[23:len(webMsg)], re.MULTILINE)
                     if(m):
@@ -2905,21 +2934,25 @@ while True:
                     # using a web page:
                     # http://(Pi address)/index.php?submit=1&dumpState=1
                     webResponseMsg = ('time=' + str(now) + ', fakeMaster='
-                        + str(fakeMaster) + ', rs485Adapter=' + rs485Adapter
-                        + ', baud=' + str(baud)
-                        + ', wiringMaxAmpsAllTWCs=' + str(wiringMaxAmpsAllTWCs)
-                        + ', wiringMaxAmpsPerTWC=' + str(wiringMaxAmpsPerTWC)
-                        + ', minAmpsPerTWC=' + str(minAmpsPerTWC)
-                        + ', greenEnergyAmpsOffset=' + str(greenEnergyAmpsOffset)
-                        + ', debugLevel=' + str(debugLevel)
-                        + '\n')
+                                      + str(fakeMaster) + ', rs485Adapter=' + rs485Adapter
+                                      + ', baud=' + str(baud)
+                                      + ', wiringMaxAmpsAllTWCs=' + str(wiringMaxAmpsAllTWCs)
+                                      + ', wiringMaxAmpsPerTWC=' + str(wiringMaxAmpsPerTWC)
+                                      + ', minAmpsPerTWC=' + str(minAmpsPerTWC)
+                                      + ', greenEnergyAmpsOffset=' + str(greenEnergyAmpsOffset)
+                                      + ', debugLevel=' + str(debugLevel)
+                                      + '\n')
                     webResponseMsg += (
                         'carApiStopAskingToStartCharging=' + str(carApiStopAskingToStartCharging)
-                        + '\ncarApiLastStartOrStopChargeTime=' + str(time.strftime("%m-%d-%y %H:%M:%S", time.localtime(carApiLastStartOrStopChargeTime)))
-                        + '\ncarApiLastErrorTime=' + str(time.strftime("%m-%d-%y %H:%M:%S", time.localtime(carApiLastErrorTime)))
-                        + '\ncarApiTokenExpireTime=' + str(time.strftime("%m-%d-%y %H:%M:%S", time.localtime(carApiTokenExpireTime)))
+                        + '\ncarApiLastStartOrStopChargeTime=' +
+                        str(time.strftime("%m-%d-%y %H:%M:%S",
+                                          time.localtime(carApiLastStartOrStopChargeTime)))
+                        + '\ncarApiLastErrorTime=' +
+                        str(time.strftime("%m-%d-%y %H:%M:%S", time.localtime(carApiLastErrorTime)))
+                        + '\ncarApiTokenExpireTime=' +
+                        str(time.strftime("%m-%d-%y %H:%M:%S", time.localtime(carApiTokenExpireTime)))
                         + '\n'
-                        )
+                    )
 
                     for vehicle in carApiVehicles:
                         webResponseMsg += str(vehicle.__dict__) + '\n'
@@ -2946,20 +2979,22 @@ while True:
                                 webResponseMsg = webResponseMsg[0:290]
 
                             webIPCqueue.send(struct.pack('=LH' + str(len(webResponseMsg)) + 's', webMsgTime, webMsgID,
-                                   webResponseMsg.encode('ascii')), block=False)
+                                                         webResponseMsg.encode('ascii')), block=False)
                         else:
                             # In this case, block=False prevents blocking if the message
                             # queue is too full for our message to fit. Instead, an
                             # error is returned.
-                            msgTemp = struct.pack('=LH1s', webMsgTime, webMsgID, bytearray([numPackets]))
+                            msgTemp = struct.pack('=LH1s', webMsgTime,
+                                                  webMsgID, bytearray([numPackets]))
                             webIPCqueue.send(msgTemp, block=False)
                             for i in range(0, numPackets):
                                 packet = webResponseMsg[i*290:i*290+290]
                                 webIPCqueue.send(struct.pack('=LH' + str(len(packet)) + 's', webMsgTime, webMsgID,
-                                   packet.encode('ascii')), block=False)
+                                                             packet.encode('ascii')), block=False)
 
                     except sysv_ipc.BusyError:
-                        print(time_now() + ": Error: IPC queue full when trying to send response to web interface.")
+                        print(
+                            time_now() + ": Error: IPC queue full when trying to send response to web interface.")
 
         except sysv_ipc.BusyError:
             # No web message is waiting.
@@ -3021,7 +3056,7 @@ while True:
                 # such as incorrect termination or bias resistors on the
                 # rs485 wiring if you see it frequently.
                 if(debugLevel >= 10):
-                    print("Found end of message before full-length message received.  " \
+                    print("Found end of message before full-length message received.  "
                           "Discard and wait for new message.")
 
                 msg = data
@@ -3080,11 +3115,11 @@ while True:
                and msg[0:2] != b'\xFC\xE1' and msg[0:2] != b'\xFB\xE2'
                and msg[0:2] != b'\xFD\xE2' and msg[0:2] != b'\xFB\xEB'
                and msg[0:2] != b'\xFD\xEB' and msg[0:2] != b'\xFD\xE0'
-            ):
+               ):
                 lastTWCResponseMsg = msg
 
             if(debugLevel >= 9):
-                print("Rx@" + time_now() + ": (" + hex_str(ignoredData) + ') ' \
+                print("Rx@" + time_now() + ": (" + hex_str(ignoredData) + ') '
                       + hex_str(msg) + "")
 
             ignoredData = bytearray()
@@ -3094,8 +3129,8 @@ while True:
             # long in original TWCs, or 16 bytes in newer TWCs (protocolVersion
             # == 2).
             if(len(msg) != 14 and len(msg) != 16):
-                print(time_now() + ": ERROR: Ignoring message of unexpected length %d: %s" % \
-                       (len(msg), hex_str(msg)))
+                print(time_now() + ": ERROR: Ignoring message of unexpected length %d: %s" %
+                      (len(msg), hex_str(msg)))
                 continue
 
             checksumExpected = msg[len(msg) - 1]
@@ -3105,7 +3140,7 @@ while True:
 
             if((checksum & 0xFF) != checksumExpected):
                 print("ERROR: Checksum %X does not match %02X.  Ignoring message: %s" %
-                    (checksum, checksumExpected, hex_str(msg)))
+                      (checksum, checksumExpected, hex_str(msg)))
                 continue
 
             if(fakeMaster == 1):
@@ -3118,7 +3153,8 @@ while True:
                 # end of the string (even without the re.MULTILINE option), and
                 # sometimes our strings do end with a newline character that is
                 # actually the CRC byte with a value of 0A or 0D.
-                msgMatch = re.search(b'^\xfd\xe2(..)(.)(..)\x00\x00\x00\x00\x00\x00.+\Z', msg, re.DOTALL)
+                msgMatch = re.search(
+                    b'^\xfd\xe2(..)(.)(..)\x00\x00\x00\x00\x00\x00.+\Z', msg, re.DOTALL)
                 if(msgMatch and foundMsgMatch == False):
                     # Handle linkready message from slave.
                     #
@@ -3137,9 +3173,9 @@ while True:
                     maxAmps = ((msgMatch.group(3)[0] << 8) + msgMatch.group(3)[1]) / 100
 
                     if(debugLevel >= 1):
-                        print(time_now() + ": %.2f amp slave TWC %02X%02X is ready to link.  Sign: %s" % \
-                            (maxAmps, senderID[0], senderID[1],
-                            hex_str(sign)))
+                        print(time_now() + ": %.2f amp slave TWC %02X%02X is ready to link.  Sign: %s" %
+                              (maxAmps, senderID[0], senderID[1],
+                               hex_str(sign)))
 
                     if(maxAmps >= 80):
                         # U.S. chargers need a spike to 21A to cancel a 6A
@@ -3154,8 +3190,8 @@ while True:
                         spikeAmpsToCancel6ALimit = 16
 
                     if(senderID == fakeTWCID):
-                        print(time_now + ": Slave TWC %02X%02X reports same TWCID as master.  " \
-                              "Slave should resolve by changing its TWCID." % \
+                        print(time_now + ": Slave TWC %02X%02X reports same TWCID as master.  "
+                              "Slave should resolve by changing its TWCID." %
                               (senderID[0], senderID[1]))
                         # I tested sending a linkready to a real master with the
                         # same TWCID as master and instead of master sending back
@@ -3185,8 +3221,8 @@ while True:
                             slaveTWC.minAmpsTWCSupports = 6
 
                         if(debugLevel >= 1):
-                            print(time_now() + ": Set slave TWC %02X%02X protocolVersion to %d, minAmpsTWCSupports to %d." % \
-                                 (senderID[0], senderID[1], slaveTWC.protocolVersion, slaveTWC.minAmpsTWCSupports))
+                            print(time_now() + ": Set slave TWC %02X%02X protocolVersion to %d, minAmpsTWCSupports to %d." %
+                                  (senderID[0], senderID[1], slaveTWC.protocolVersion, slaveTWC.minAmpsTWCSupports))
 
                     # We expect maxAmps to be 80 on U.S. chargers and 32 on EU
                     # chargers. Either way, don't allow
@@ -3195,8 +3231,8 @@ while True:
                         print("\n\n!!! DANGER DANGER !!!\nYou have set wiringMaxAmpsPerTWC to "
                               + str(wiringMaxAmpsPerTWC)
                               + " which is greater than the max "
-                              + str(maxAmps) + " amps your charger says it can handle.  " \
-                              "Please review instructions in the source code and consult an " \
+                              + str(maxAmps) + " amps your charger says it can handle.  "
+                              "Please review instructions in the source code and consult an "
                               "electrician if you don't know what to do.")
                         slaveTWC.wiringMaxAmps = maxAmps / 4
 
@@ -3232,9 +3268,9 @@ while True:
                         # Normally, a slave only sends us a heartbeat message if
                         # we send them ours first, so it's not expected we would
                         # hear heartbeat from a slave that's not in our list.
-                        print(time_now() + ": ERROR: Received heartbeat message from " \
-                                "slave %02X%02X that we've not met before." % \
-                                (senderID[0], senderID[1]))
+                        print(time_now() + ": ERROR: Received heartbeat message from "
+                              "slave %02X%02X that we've not met before." %
+                              (senderID[0], senderID[1]))
                         continue
 
                     if(fakeTWCID == receiverID):
@@ -3248,10 +3284,10 @@ while True:
                         # once so far, so it could have been corruption in the
                         # data or an unusual case.
                         if(debugLevel >= 1):
-                            print(time_now() + ": WARNING: Slave TWC %02X%02X status data: " \
-                                  "%s sent to unknown TWC %02X%02X." % \
-                                (senderID[0], senderID[1],
-                                hex_str(heartbeatData), receiverID[0], receiverID[1]))
+                            print(time_now() + ": WARNING: Slave TWC %02X%02X status data: "
+                                  "%s sent to unknown TWC %02X%02X." %
+                                  (senderID[0], senderID[1],
+                                   hex_str(heartbeatData), receiverID[0], receiverID[1]))
                 else:
                     msgMatch = re.search(b'\A\xfd\xeb(..)(..)(.+?).\Z', msg, re.DOTALL)
                 if(msgMatch and foundMsgMatch == False):
@@ -3283,26 +3319,28 @@ while True:
                     data = msgMatch.group(3)
 
                     if(debugLevel >= 1):
-                        print(time_now() + ": Slave TWC %02X%02X unexpectedly reported kWh and voltage data: %s." % \
-                            (senderID[0], senderID[1],
-                            hex_str(data)))
+                        print(time_now() + ": Slave TWC %02X%02X unexpectedly reported kWh and voltage data: %s." %
+                              (senderID[0], senderID[1],
+                               hex_str(data)))
                 else:
-                    msgMatch = re.search(b'\A\xfc(\xe1|\xe2)(..)(.)\x00\x00\x00\x00\x00\x00\x00\x00.+\Z', msg, re.DOTALL)
+                    msgMatch = re.search(
+                        b'\A\xfc(\xe1|\xe2)(..)(.)\x00\x00\x00\x00\x00\x00\x00\x00.+\Z', msg, re.DOTALL)
                 if(msgMatch and foundMsgMatch == False):
                     foundMsgMatch = True
-                    print(time_now() + " ERROR: TWC is set to Master mode so it can't be controlled by TWCManager.  " \
-                           "Search installation instruction PDF for 'rotary switch' and set " \
-                           "switch so its arrow points to F on the dial.")
+                    print(time_now() + " ERROR: TWC is set to Master mode so it can't be controlled by TWCManager.  "
+                          "Search installation instruction PDF for 'rotary switch' and set "
+                          "switch so its arrow points to F on the dial.")
                 if(foundMsgMatch == False):
                     print(time_now() + ": *** UNKNOWN MESSAGE FROM SLAVE:" + hex_str(msg)
-                          + "\nPlease private message user CDragon at http://teslamotorsclub.com " \
+                          + "\nPlease private message user CDragon at http://teslamotorsclub.com "
                           "with a copy of this error.")
             else:
                 ###########################
                 # Pretend to be a slave TWC
 
                 foundMsgMatch = False
-                msgMatch = re.search(b'\A\xfc\xe1(..)(.)\x00\x00\x00\x00\x00\x00\x00\x00+?.\Z', msg, re.DOTALL)
+                msgMatch = re.search(
+                    b'\A\xfc\xe1(..)(.)\x00\x00\x00\x00\x00\x00\x00\x00+?.\Z', msg, re.DOTALL)
                 if(msgMatch and foundMsgMatch == False):
                     # Handle linkready1 from master.
                     # See notes in send_master_linkready1() for details.
@@ -3316,8 +3354,8 @@ while True:
                     # data area. If we ever get this message with non-00 data
                     # we'll print it as an unexpected message.
                     if(debugLevel >= 1):
-                        print(time_now() + ": Master TWC %02X%02X Linkready1.  Sign: %s" % \
-                            (senderID[0], senderID[1], hex_str(sign)))
+                        print(time_now() + ": Master TWC %02X%02X Linkready1.  Sign: %s" %
+                              (senderID[0], senderID[1], hex_str(sign)))
 
                     if(senderID == fakeTWCID):
                         master_id_conflict()
@@ -3328,7 +3366,8 @@ while True:
                     # linkready2.
 
                 else:
-                    msgMatch = re.search(b'\A\xfb\xe2(..)(.)\x00\x00\x00\x00\x00\x00\x00\x00+?.\Z', msg, re.DOTALL)
+                    msgMatch = re.search(
+                        b'\A\xfb\xe2(..)(.)\x00\x00\x00\x00\x00\x00\x00\x00+?.\Z', msg, re.DOTALL)
                 if(msgMatch and foundMsgMatch == False):
                     # Handle linkready2 from master.
                     # See notes in send_master_linkready2() for details.
@@ -3343,8 +3382,8 @@ while True:
                     # we'll print it as an unexpected message.
 
                     if(debugLevel >= 1):
-                        print(time_now() + ": Master TWC %02X%02X Linkready2.  Sign: %s" % \
-                            (senderID[0], senderID[1], hex_str(sign)))
+                        print(time_now() + ": Master TWC %02X%02X Linkready2.  Sign: %s" %
+                              (senderID[0], senderID[1], hex_str(sign)))
 
                     if(senderID == fakeTWCID):
                         master_id_conflict()
@@ -3369,22 +3408,23 @@ while True:
                         # This message was intended for another slave.
                         # Ignore it.
                         if(debugLevel >= 11):
-                            print(time_now() + ": Master %02X%02X sent " \
-                                "heartbeat message %s to receiver %02X%02X " \
-                                "that isn't our fake slave." % \
-                                (senderID[0], senderID[1],
-                                hex_str(heartbeatData),
-                                receiverID[0], receiverID[1]))
+                            print(time_now() + ": Master %02X%02X sent "
+                                  "heartbeat message %s to receiver %02X%02X "
+                                  "that isn't our fake slave." %
+                                  (senderID[0], senderID[1],
+                                   hex_str(heartbeatData),
+                                   receiverID[0], receiverID[1]))
                         continue
 
                     amps = (slaveHeartbeatData[1] << 8) + slaveHeartbeatData[2]
-                    kWhDelivered += (((240 * (amps/100)) / 1000 / 60 / 60) * (now - timeLastkWhDelivered))
+                    kWhDelivered += (((240 * (amps/100)) / 1000 / 60 / 60)
+                                     * (now - timeLastkWhDelivered))
                     timeLastkWhDelivered = now
                     if(time.time() - timeLastkWhSaved >= 300.0):
                         timeLastkWhSaved = now
                         if(debugLevel >= 9):
-                            print(time_now() + ": Fake slave has delivered %.3fkWh" % \
-                               (kWhDelivered))
+                            print(time_now() + ": Fake slave has delivered %.3fkWh" %
+                                  (kWhDelivered))
                         save_settings()
 
                     if(heartbeatData[0] == 0x07):
@@ -3434,18 +3474,19 @@ while True:
                             slaveHeartbeatData[4] = (amps & 0xFF)
                             slaveHeartbeatData[0] = 0x0A
                     elif(heartbeatData[0] == 0x02):
-                        print(time_now() + ": Master heartbeat contains error %ld: %s" % \
-                                (heartbeatData[1], hex_str(heartbeatData)))
+                        print(time_now() + ": Master heartbeat contains error %ld: %s" %
+                              (heartbeatData[1], hex_str(heartbeatData)))
                     else:
-                        print(time_now() + ": UNKNOWN MHB state %s" % \
-                                (hex_str(heartbeatData)))
+                        print(time_now() + ": UNKNOWN MHB state %s" %
+                              (hex_str(heartbeatData)))
 
                     # Slaves always respond to master's heartbeat by sending
                     # theirs back.
                     slaveTWC.send_slave_heartbeat(senderID)
                     slaveTWC.print_status(slaveHeartbeatData)
                 else:
-                    msgMatch = re.search(b'\A\xfc\x1d\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00+?.\Z', msg, re.DOTALL)
+                    msgMatch = re.search(
+                        b'\A\xfc\x1d\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00+?.\Z', msg, re.DOTALL)
                 if(msgMatch and foundMsgMatch == False):
                     # Handle 2-hour idle message
                     #
@@ -3466,7 +3507,8 @@ while True:
                     if(debugLevel >= 1):
                         print(time_now() + ": Received 2-hour idle message from Master.")
                 else:
-                    msgMatch = re.search(b'\A\xfd\xe2(..)(.)(..)\x00\x00\x00\x00\x00\x00.+\Z', msg, re.DOTALL)
+                    msgMatch = re.search(
+                        b'\A\xfd\xe2(..)(.)(..)\x00\x00\x00\x00\x00\x00.+\Z', msg, re.DOTALL)
                 if(msgMatch and foundMsgMatch == False):
                     # Handle linkready message from slave on network that
                     # presumably isn't us.
@@ -3475,13 +3517,13 @@ while True:
                     sign = msgMatch.group(2)
                     maxAmps = ((msgMatch.group(3)[0] << 8) + msgMatch.group(3)[1]) / 100
                     if(debugLevel >= 1):
-                        print(time_now() + ": %.2f amp slave TWC %02X%02X is ready to link.  Sign: %s" % \
-                            (maxAmps, senderID[0], senderID[1],
-                            hex_str(sign)))
+                        print(time_now() + ": %.2f amp slave TWC %02X%02X is ready to link.  Sign: %s" %
+                              (maxAmps, senderID[0], senderID[1],
+                               hex_str(sign)))
                     if(senderID == fakeTWCID):
-                        print(time_now() + ": ERROR: Received slave heartbeat message from " \
-                                "slave %02X%02X that has the same TWCID as our fake slave." % \
-                                (senderID[0], senderID[1]))
+                        print(time_now() + ": ERROR: Received slave heartbeat message from "
+                              "slave %02X%02X that has the same TWCID as our fake slave." %
+                              (senderID[0], senderID[1]))
                         continue
 
                     new_slave(senderID, maxAmps)
@@ -3496,9 +3538,9 @@ while True:
                     heartbeatData = msgMatch.group(3)
 
                     if(senderID == fakeTWCID):
-                        print(time_now() + ": ERROR: Received slave heartbeat message from " \
-                                "slave %02X%02X that has the same TWCID as our fake slave." % \
-                                (senderID[0], senderID[1]))
+                        print(time_now() + ": ERROR: Received slave heartbeat message from "
+                              "slave %02X%02X that has the same TWCID as our fake slave." %
+                              (senderID[0], senderID[1]))
                         continue
 
                     try:
@@ -3511,7 +3553,8 @@ while True:
 
                     slaveTWC.print_status(heartbeatData)
                 else:
-                    msgMatch = re.search(b'\A\xfb\xeb(..)(..)(\x00\x00\x00\x00\x00\x00\x00\x00\x00+?).\Z', msg, re.DOTALL)
+                    msgMatch = re.search(
+                        b'\A\xfb\xeb(..)(..)(\x00\x00\x00\x00\x00\x00\x00\x00\x00+?).\Z', msg, re.DOTALL)
                 if(msgMatch and foundMsgMatch == False):
                     # Handle voltage request message.  This is only supported in
                     # Protocol 2 so we always reply with a 16-byte message.
@@ -3520,24 +3563,24 @@ while True:
                     receiverID = msgMatch.group(2)
 
                     if(senderID == fakeTWCID):
-                        print(time_now() + ": ERROR: Received voltage request message from " \
-                                "TWC %02X%02X that has the same TWCID as our fake slave." % \
-                                (senderID[0], senderID[1]))
+                        print(time_now() + ": ERROR: Received voltage request message from "
+                              "TWC %02X%02X that has the same TWCID as our fake slave." %
+                              (senderID[0], senderID[1]))
                         continue
 
                     if(debugLevel >= 8):
-                        print(time_now() + ": VRQ from %02X%02X to %02X%02X" % \
-                            (senderID[0], senderID[1], receiverID[0], receiverID[1]))
+                        print(time_now() + ": VRQ from %02X%02X to %02X%02X" %
+                              (senderID[0], senderID[1], receiverID[0], receiverID[1]))
 
                     if(receiverID == fakeTWCID):
                         kWhCounter = int(kWhDelivered)
                         kWhPacked = bytearray([((kWhCounter >> 24) & 0xFF),
-                                      ((kWhCounter >> 16) & 0xFF),
-                                      ((kWhCounter >> 8) & 0xFF),
-                                      (kWhCounter & 0xFF)])
-                        print(time_now() + ": VRS %02X%02X: %dkWh (%s) %dV %dV %dV" % \
-                            (fakeTWCID[0], fakeTWCID[1],
-                            kWhCounter, hex_str(kWhPacked), 240, 0, 0))
+                                               ((kWhCounter >> 16) & 0xFF),
+                                               ((kWhCounter >> 8) & 0xFF),
+                                               (kWhCounter & 0xFF)])
+                        print(time_now() + ": VRS %02X%02X: %dkWh (%s) %dV %dV %dV" %
+                              (fakeTWCID[0], fakeTWCID[1],
+                               kWhCounter, hex_str(kWhPacked), 240, 0, 0))
                         send_msg(bytearray(b'\xFD\xEB') + fakeTWCID
                                  + kWhPacked
                                  + bytearray(b'\x00\xF0\x00\x00\x00\x00\x00'))
@@ -3558,15 +3601,15 @@ while True:
                     voltsPhaseC = (data[8] << 8) + data[9]
 
                     if(senderID == fakeTWCID):
-                        print(time_now() + ": ERROR: Received voltage response message from " \
-                                "TWC %02X%02X that has the same TWCID as our fake slave." % \
-                                (senderID[0], senderID[1]))
+                        print(time_now() + ": ERROR: Received voltage response message from "
+                              "TWC %02X%02X that has the same TWCID as our fake slave." %
+                              (senderID[0], senderID[1]))
                         continue
 
                     if(debugLevel >= 1):
-                        print(time_now() + ": VRS %02X%02X: %dkWh %dV %dV %dV" % \
-                            (senderID[0], senderID[1],
-                            kWhCounter, voltsPhaseA, voltsPhaseB, voltsPhaseC))
+                        print(time_now() + ": VRS %02X%02X: %dkWh %dV %dV %dV" %
+                              (senderID[0], senderID[1],
+                               kWhCounter, voltsPhaseA, voltsPhaseB, voltsPhaseC))
 
                 if(foundMsgMatch == False):
                     print(time_now() + ": ***UNKNOWN MESSAGE from master: " + hex_str(msg))

@@ -1288,9 +1288,22 @@ def background_tasks_thread():
 
 def check_utility_fuse_current():
     global debugLevel, backgroundTasksLock, maxAmpsMains, \
-        leftOverAmpsForAllTWCs, avgMainsAmps
+        leftOverAmpsForAllTWCs, avgMainsAmps, connectionNO, LastMainsAmpsTime
 
     now = time.time()
+
+    try:
+        connectionNO
+        LastMainsAmpsTime
+    except NameError:
+        connectionNO = 0
+        LastMainsAmpsTime = 0
+
+    # do not use this funcion more than one time per second
+    if(now - LastMainsAmpsTime < 1):
+        return
+
+
     # Check how many amps are measured at the utility mains to protect the main fuse of your house.
     # We want to reduce the charging current if we are using more than the main fuse rating.
 
@@ -1338,24 +1351,32 @@ def check_utility_fuse_current():
 
     HOST = '192.168.0.67'  # The server's hostname or IP address
     PORT = 65432           # The port used by the server
+    mains = []
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(1)
-        s.connect((HOST, PORT))
-        s.sendall(b'client asking for data')
-        serial_line = s.recv(1024).decode()
-
-        serial_line = serial_line[:-2]  # Remove the trailing carriage return serial_line feed
-
+        connectionNO += 1
         if(debugLevel >= 12):
-            print('Received from socket server: ', str(serial_line))
+            print ("connection # " + str(connectionNO))
+        s.settimeout(1)
+        try:
+            s.connect((HOST, PORT))
+            s.sendall(b'x') # client asking for data
+            serial_line = s.recv(1024).decode()[:-2]
 
-        # Split the string at each space and create a list of the data
-        mains = serial_line.split(' ')
+            if(debugLevel >= 12):
+                print('Received from socket server: ', str(serial_line))
 
-    #MainsAmpsPhases = [0] * 3
+            # Split the string at each space and create a list of the data
+            mains = serial_line.split(' ')
 
-    if(len(mains) >= 15):
+        except socket.error as e:
+            print("socket error: " + str(e))
+
+
+
+    if(len(mains) >= 16):
+
+        LastMainsAmpsTime = now
 
         # We're only interested in the three current measurements
         # put the L1, L2 & L3 Amps in a list
@@ -1443,9 +1464,9 @@ def check_utility_fuse_current():
             avgMainsAmpsChangeTime = now
 
         if(debugLevel >= 8):
-            print(" L1: " + str(MainsAmpsPhases[0]) + "A" +
-                  " L2: " + str(MainsAmpsPhases[1]) + "A" +
-                  " L3: " + str(MainsAmpsPhases[2]) + "A" +
+            print(" L1: " + str(MainsAmpsPhases[0]) +
+                  "   L2: " + str(MainsAmpsPhases[1]) +
+                  "   L3: " + str(MainsAmpsPhases[2]) +
                   "\n averaged max mains Amps: " + str(round(maxMainsAmps, 2)) +
                   "\n lowest leftOverAmpsForAllTWCs in list: " + str(leftOverAmpsForAllTWCs) +
                   "\n last average mains Amps: " + str(round(avgMainsAmps, 2)) +
@@ -1455,17 +1476,24 @@ def check_utility_fuse_current():
 
     else:
         print(time_now() +
-              " ERROR: Can't connect to utility mains current sensor! ")
+              " ERROR: Serial read mains sensor problem! ")
 
 #        del avgMainsList[:]
         del mains[:]
 
-        #  if utility current measurement fails use no solar tracking
-        avgMainsAmps = 0
+        # if last valid MainsAmps from socket server is older than 15 sec
+        # use 8Amps as limmit leftOverAmpsForAllTWCs
+        if(now - LastMainsAmpsTime > 15):
 
-        # if utility current measurement fails use 12A as limmit
-        # this is not really save but for me it's more inmportant that the car keeps charging at a low amperage.
-        leftOverAmpsForAllTWCs = 12
+            #  if utility current measurement fails use no solar tracking
+            avgMainsAmps = 0
+
+            # if utility current measurement fails use 8A as limmit
+            # this is not really save but for me it's more inmportant that the car keeps charging at a low amperage.
+            leftOverAmpsForAllTWCs = 8
+            print(str(int(now - LastMainsAmpsTime)) +
+                " sec no measurement, leftOverAmpsForAllTWCs set to " +
+                str(leftOverAmpsForAllTWCs))
 
 
 #

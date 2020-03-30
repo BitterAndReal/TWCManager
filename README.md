@@ -11,7 +11,8 @@ See **TWCManager Installation.pdf** for how to install and use.
 
 # This TWCManager fork works with utility mains current measuring:
 
-download the forked code to your raspberry pi using this git command:
+Follow the instructions in TWCManager Installation.pdf to install TWCManager.
+Download the forked code to your raspberry pi using this git command:
 
     $ git clone -b master --single-branch https://github.com/BitterAndReal/TWCManager.git~/TWC
 
@@ -30,9 +31,10 @@ If TWC and mains connection are far away from each other it is possible to use t
 raspberry pi connected to the same network and using a socket connection.
 
 
-
-
 **this is how you prepare the pi to run the socket-server script:**
+
+Follow the instructions in TWCManager Installation.pdf to install OS on Raspberry Pi Zero W and set up wireless access to Pi.
+Then use this commands to...
 
     $ sudo apt-get update
     $ sudo apt-get install -y git

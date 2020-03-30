@@ -33,8 +33,9 @@ raspberry pi connected to the same network and using a socket connection.
 
 **this is how you prepare the pi to run the socket-server script:**
 
-Follow the instructions in TWCManager Installation.pdf to install OS on Raspberry Pi Zero W and set up wireless access to Pi.
-Then use this commands to...
+Follow the instructions in TWCManager Installation.pdf to install OS on Raspberry Pi Zero W and
+set up wireless access to Pi with a static IP.
+If you got a ssh connection use this commands to...
 
     $ sudo apt-get update
     $ sudo apt-get install -y git

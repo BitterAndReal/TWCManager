@@ -9,7 +9,6 @@ See **TWCManager Installation.pdf** for how to install and use.
 
 
 # This fork works with utility mains current measuring:
-########################################################################################
 
 download the forked code to your raspberry pi using this git command:
 
@@ -66,10 +65,7 @@ after you have a ssh connection to your current measure pi you can open the scre
     $ screen -r socketserver
 
 
-
-
-
-
+**alternatively use DSMR-reader for dutch smart meter**
 
 If you want to use the dutch smart meter to read the AC utility mains current you could try DSMR-reader for RaspberryPi
 This is not tested and not part of this fork but could be a good alternative for the current measure shield.

@@ -11,7 +11,7 @@ See **TWCManager Installation.pdf** for how to install and use.
 #####################################################################
 
 download the forked code to your raspberry pi using this git command:
-git clone -b master --single-branch https://github.com/BitterAndReal/TWCManager.git~/TWC
+    $ git clone -b master --single-branch https://github.com/BitterAndReal/TWCManager.git~/TWC
 
 If we measure how many amps are drawn at the utility mains we can protect the main fuse of your house.
 And we can use the mains reading to calculate how much green energy we have left to charge the car.
@@ -29,22 +29,22 @@ raspberry pi connected to the same network and using a socket connection.
 
 
 
-** this is how you prepare the pi to run the socket-server script: **
+**this is how you prepare the pi to run the socket-server script:**
 
-$ sudo apt-get update
-$ sudo apt-get install -y git
-$ sudo apt-get install python3-pip
-$ sudo python3 -m pip install pyserial
-$ sudo apt-get install -y screen
+    $ sudo apt-get update
+    $ sudo apt-get install -y git
+    $ sudo apt-get install python3-pip
+    $ sudo python3 -m pip install pyserial
+    $ sudo apt-get install -y screen
 
 create this file on the Pi:
-$ ​sudo nano ~/socket-server.py
+    $ ​sudo nano ~/socket-server.py
 copy the code of this file into it and save it
 
 to start the socket server at boot:
-$ ​sudo nano /etc/rc.local​
+    $ ​sudo nano /etc/rc.local​
 Near the end of the file, before the ​exit 0​ line, add:
- su - pi -c "screen -dm -S socketserver sudo python3 /home/pi/socket-server.py"
+    su - pi -c "screen -dm -S socketserver sudo python3 /home/pi/socket-server.py"
 
 # How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
     $ sudo raspi-config
@@ -53,12 +53,11 @@ Near the end of the file, before the ​exit 0​ line, add:
     then if you want the Serial Port hardware enabled (yes).
     Then use /dev/serial0 in any code which accesses the Serial Port.
 
-$ sudo apt-get install python-serial
-$ sudo reboot
+    $ sudo apt-get install python-serial
+    $ sudo reboot
 
 after you have a ssh connection to your current measure pi you can open the screen with:
-
-$ screen -r socketserver
+    $ screen -r socketserver
 
 
 

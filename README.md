@@ -29,6 +29,7 @@ http://lechacal.com/wiki/index.php?title=RPIZ_CT3V1
 http://lechacalshop.com/gb/internetofthing/63-rpizct3v1.html
 
 The current measure shield could be on the same Raspberry Pi as TWCmanager.
+
 If TWC and mains connection are far away from each other it is possible to use two
 raspberry pi connected to the same network and using a socket connection.
 
@@ -36,8 +37,8 @@ raspberry pi connected to the same network and using a socket connection.
 **this is how you prepare the pi to run the socket-server script:**
 
 Follow the instructions in TWCManager Installation.pdf to install OS on Raspberry Pi Zero W and
-set up wireless access to Pi with a static IP.
-If you got a ssh connection use this commands to...
+ set up wireless access to Pi with a static IP.
+ If you got a ssh connection use this commands to...
 
     $ sudo apt-get update
     $ sudo apt-get install -y git

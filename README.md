@@ -2,6 +2,7 @@
 TWCManager lets you control the amount of power delivered by a Tesla Wall Connector (TWC) to the car it's charging.  This can save around 6kWh per month when used to track a local green energy source like solar panels on your roof.  It can also avoid drawing grid energy for those without net metering or limit charging to times of day when prices are cheapest.
 
 Due to hardware limitations, TWCManager will not work with Tesla's older High Power Wall Connectors (HPWCs) that were discontinued around April 2016.
+
 UPDATE: and unfortunately also do not work with the V3 wifi TWC's that were released jan 2020.
 
 See **TWCManager Installation.pdf** for how to install and use.
@@ -21,6 +22,7 @@ And we can use the mains reading to calculate how much green energy we have left
 I used the following Raspberry pi zero shield to measure the utility mains current:
 3 current and 1 voltage adapter
 http://lechacal.com/wiki/index.php?title=RPIZ_CT3V1
+
 http://lechacalshop.com/gb/internetofthing/63-rpizct3v1.html
 
 The current measure shield could be on the same Raspberry Pi as TWCmanager.
@@ -39,12 +41,15 @@ raspberry pi connected to the same network and using a socket connection.
     $ sudo apt-get install -y screen
 
 create this file on the Pi:
+
     $ ​sudo nano ~/socket-server.py
+    
 copy the code of the file socket-server.py into it and save it
 
 to start the socket server at boot:
 
     $ ​sudo nano /etc/rc.local​
+    
 Near the end of the file, before the ​exit 0​ line, add:
 
     su - pi -c "screen -dm -S socketserver sudo python3 /home/pi/socket-server.py"

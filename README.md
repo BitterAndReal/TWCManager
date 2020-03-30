@@ -6,9 +6,10 @@ UPDATE: and unfortunately also do not work with the V3 wifi TWC's that were rele
 
 See **TWCManager Installation.pdf** for how to install and use.
 
-#####################################################################
+
+
 # This fork works with utility mains current measuring:
-#####################################################################
+########################################################################################
 
 download the forked code to your raspberry pi using this git command:
     $ git clone -b master --single-branch https://github.com/BitterAndReal/TWCManager.git~/TWC
@@ -46,7 +47,7 @@ to start the socket server at boot:
 Near the end of the file, before the ​exit 0​ line, add:
     su - pi -c "screen -dm -S socketserver sudo python3 /home/pi/socket-server.py"
 
-# How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
+**How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:**
     $ sudo raspi-config
     Select Interfacing Options / Serial
     then specify if you want a Serial console (no)

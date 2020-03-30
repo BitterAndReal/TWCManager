@@ -12,11 +12,13 @@ See **TWCManager Installation.pdf** for how to install and use.
 # This TWCManager fork works with utility mains current measuring:
 
 Follow the instructions in TWCManager Installation.pdf to install TWCManager.
+
 Download the forked code to your raspberry pi using this git command:
 
     $ git clone -b master --single-branch https://github.com/BitterAndReal/TWCManager.git~/TWC
 
 If we measure how many amps are drawn at the utility mains we can protect the main fuse of your house.
+
 And we can use the mains reading to calculate how much green energy we have left to charge the car.
 
 

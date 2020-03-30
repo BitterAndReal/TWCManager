@@ -12,6 +12,7 @@ See **TWCManager Installation.pdf** for how to install and use.
 ########################################################################################
 
 download the forked code to your raspberry pi using this git command:
+
     $ git clone -b master --single-branch https://github.com/BitterAndReal/TWCManager.git~/TWC
 
 If we measure how many amps are drawn at the utility mains we can protect the main fuse of your house.
@@ -40,11 +41,13 @@ raspberry pi connected to the same network and using a socket connection.
 
 create this file on the Pi:
     $ ​sudo nano ~/socket-server.py
-copy the code of this file into it and save it
+copy the code of the file socket-server.py into it and save it
 
 to start the socket server at boot:
+
     $ ​sudo nano /etc/rc.local​
 Near the end of the file, before the ​exit 0​ line, add:
+
     su - pi -c "screen -dm -S socketserver sudo python3 /home/pi/socket-server.py"
 
 **How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:**

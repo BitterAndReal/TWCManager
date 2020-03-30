@@ -9,7 +9,7 @@ See **TWCManager Installation.pdf** for how to install and use.
 
 
 
-# This fork works with utility mains current measuring:
+# This TWCManager fork works with utility mains current measuring:
 
 download the forked code to your raspberry pi using this git command:
 
@@ -40,13 +40,13 @@ raspberry pi connected to the same network and using a socket connection.
     $ sudo python3 -m pip install pyserial
     $ sudo apt-get install -y screen
 
-create this file on the Pi:
+**copy socket server script to PI:**
 
     $ ​sudo nano ~/socket-server.py
     
 copy the code of the file socket-server.py into it and save it
 
-to start the socket server at boot:
+**to start the socket server at boot:**
 
     $ ​sudo nano /etc/rc.local​
     
@@ -65,11 +65,11 @@ Near the end of the file, before the ​exit 0​ line, add:
     $ sudo apt-get install python-serial
     $ sudo reboot
 
-after you have a ssh connection to your current measure pi you can open the screen with:
+**after you have a ssh connection to your current measure pi you can open the screen with:**
 
     $ screen -r socketserver
 
-
+#
 **alternatively use DSMR-reader for dutch smart meter**
 
 If you want to use the dutch smart meter to read the AC utility mains current you could try DSMR-reader for RaspberryPi

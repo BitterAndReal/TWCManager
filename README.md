@@ -51,6 +51,7 @@ Near the end of the file, before the ​exit 0​ line, add:
     su - pi -c "screen -dm -S socketserver sudo python3 /home/pi/socket-server.py"
 
 **How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:**
+
     $ sudo raspi-config
     Select Interfacing Options / Serial
     then specify if you want a Serial console (no)
@@ -61,7 +62,10 @@ Near the end of the file, before the ​exit 0​ line, add:
     $ sudo reboot
 
 after you have a ssh connection to your current measure pi you can open the screen with:
+
     $ screen -r socketserver
+
+
 
 
 

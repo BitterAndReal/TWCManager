@@ -274,6 +274,10 @@ slaveSign = bytearray(b'\x77')
 #   or 3 phase 25amps = 22
 maxAmpsMains = 22
 
+# for the socket connection to the current measure pi
+SocketServerIP = '192.168.0.67'  # The socket server's IP address
+SocketPort = 65432               # The port used by the server
+
 
 #
 # End configuration parameters
@@ -1288,7 +1292,9 @@ def background_tasks_thread():
 
 def check_utility_fuse_current():
     global debugLevel, backgroundTasksLock, maxAmpsMains, \
-        leftOverAmpsForAllTWCs, avgMainsAmps, connectionNO, LastMainsAmpsTime
+        leftOverAmpsForAllTWCs, avgMainsAmps, connectionNO, LastMainsAmpsTime, \
+        SocketServerIP, SocketPort, avgMainsList, avgMainsAmpsChangeTime, \
+        GreenEnergyLeftForCharging, MainsAmpsStatus
 
     now = time.time()
 
@@ -1349,8 +1355,6 @@ def check_utility_fuse_current():
     # socket client
     # get data from the Raspberry pi running socket-server.py (the pi with the utility current measure print)
 
-    HOST = '192.168.0.67'  # The server's hostname or IP address
-    PORT = 65432           # The port used by the server
     mains = []
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -1359,7 +1363,7 @@ def check_utility_fuse_current():
             print ("connection # " + str(connectionNO))
         s.settimeout(1)
         try:
-            s.connect((HOST, PORT))
+            s.connect((SocketServerIP, SocketPort))
             s.sendall(b'x') # client asking for data
             serial_line = s.recv(1024).decode()[:-2]
 
@@ -1441,7 +1445,7 @@ def check_utility_fuse_current():
         # We measure actual house mains current which shows us how
         # much solar power is left for charging.
         ##########################################################
-        global avgMainsList, avgMainsAmpsChangeTime
+
         try:
             avgMainsList
         except NameError:
@@ -1463,6 +1467,14 @@ def check_utility_fuse_current():
             del avgMainsList[:]
             avgMainsAmpsChangeTime = now
 
+            # calculate green energy left over for charging
+            GreenEnergyLeftForCharging = int(avgMainsAmps + totalAmpsActualAllTWCs)
+
+        MainsAmpsStatus = (
+            "L1:" + str(MainsAmpsPhases[0]) + "A __ " +
+            "L2:" + str(MainsAmpsPhases[1]) + "A __ " +
+            "L3:" + str(MainsAmpsPhases[2]) + "A"
+        )
         if(debugLevel >= 8):
             print(" L1: " + str(MainsAmpsPhases[0]) +
                   "   L2: " + str(MainsAmpsPhases[1]) +
@@ -1491,6 +1503,12 @@ def check_utility_fuse_current():
             # if utility current measurement fails use 8A as limmit
             # this is not really save but for me it's more inmportant that the car keeps charging at a low amperage.
             leftOverAmpsForAllTWCs = 8
+
+            MainsAmpsStatus = (
+                "ERROR: No current reading! Charging current reduced to " +
+                str(leftOverAmpsForAllTWCs) + "A"
+            )
+
             print(str(int(now - LastMainsAmpsTime)) +
                 " sec no measurement, leftOverAmpsForAllTWCs set to " +
                 str(leftOverAmpsForAllTWCs))
@@ -2023,7 +2041,7 @@ class TWCSlave:
             timeLastGreenEnergyCheck, greenEnergyAmpsOffset, \
             slaveTWCRoundRobin, spikeAmpsToCancel6ALimit, \
             chargeNowAmps, chargeNowTimeEnd, minAmpsPerTWC, \
-            leftOverAmpsForAllTWCs, avgMainsAmps
+            leftOverAmpsForAllTWCs, GreenEnergyLeftForCharging
 
         now = time.time()
         self.timeLastRx = now
@@ -2148,13 +2166,13 @@ class TWCSlave:
                     # avgMainsAmps is an average of all 3 phases
                     # One phase could actually export energy while an other imports from the grid.
                     # But we just use an average because we cant control the charging current for each phase.
-                    if(avgMainsAmps < (-1 * minAmpsPerTWC)):
-                        maxAmpsToDivideAmongSlaves = -1 * avgMainsAmps
+                    if(GreenEnergyLeftForCharging < (-1 * minAmpsPerTWC)):
+                        maxAmpsToDivideAmongSlaves = -1 * GreenEnergyLeftForCharging
 
         # Use backgroundTasksLock to prevent the background thread from changing
         # the value of maxAmpsToDivideAmongSlaves after we've checked the value
         # is safe to use but before we've used it.
-#        backgroundTasksLock.acquire()
+#        backgroundTasksLock.acquire() # not needed for this fork
 
         if(maxAmpsToDivideAmongSlaves > wiringMaxAmpsAllTWCs):
             # Never tell the slaves to draw more amps than the physical charger
@@ -2675,6 +2693,8 @@ backgroundTasksLock = threading.Lock()
 ser = None
 ser = serial.Serial(rs485Adapter, baud, timeout=0)
 
+MainsAmpsStatus = None
+
 #
 # End global vars
 #
@@ -2880,6 +2900,8 @@ while True:
                                              int((hourResumeTrackGreenEnergy % 1) * 60)) +
                         # Send 1 if we need an email/password entered for car api, otherwise send 0
                         '`' + ('1' if needCarApiBearerToken else '0') +
+                        # add Utility mains measured Amps and status
+                        '`' + str(MainsAmpsStatus) +
                         '`' + str(len(slaveTWCRoundRobin))
                     )
 

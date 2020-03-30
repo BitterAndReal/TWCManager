@@ -334,6 +334,12 @@
 
                     $carApiEmailPasswordNeeded = $status[$statusIdx++];
 
+                    // add Utility mains measured Amps and status
+                    $MainsAmpsStatus = $status[$statusIdx++];
+                    print "<p style=\"margin-top:0;\"><strong>Utility mains measured Amps: </strong>";
+                    print $MainsAmpsStatus;
+                    print "</p><p style=\"margin-bottom:0\">";
+
                     if($status[$statusIdx] < 1) {
                         print "<strong>No slave TWCs found on RS485 network.</strong>";
                     }
@@ -342,7 +348,14 @@
                     for($i = 1; $i <= $status[$statusIdx]; $i++) {
                         $subStatus = explode('~', $status[$statusIdx + $i]);
                         $twcModelMaxAmps = $subStatus[1];
-                        print("</p><strong>TWC " . $subStatus[0] . ':</strong> ');
+                        if($subStatus[0] == '6335') {
+                          $TWCname = $subStatus[0] . " (1)";
+                        } elseif ($subStatus[0] == '6331') {
+                          $TWCname = $subStatus[0] . " (2)";
+                        } else {
+                          $TWCname = $subStatus[0];
+                        }
+                        print("</p><strong>TWC " . $TWCname . ':</strong> ');
                         if($subStatus[2] < 1.0) {
                             /*if($subStatus[4] == 0) {
                                 // I was hoping state 0 meant no car is plugged in, but

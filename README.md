@@ -22,12 +22,14 @@ If we measure how many amps are drawn at the utility mains we can protect the ma
 And we can use the mains reading to calculate how much green energy we have left to charge the car.
 
 There are a few new configuration parameters in TWC manager:
+
     UtilityMainsFuse = 22            # set UtilityMainsFuse to 90% of the utility mains fuse rating of your house
     SocketServerIP = '192.168.0.67'  # The socket server's IP address
     SocketPort = 65432               # The port used by the server
 
 
 I used the following Raspberry pi zero shield to measure the utility mains current:
+
 3 current and 1 voltage adapter
 http://lechacal.com/wiki/index.php?title=RPIZ_CT3V1
 

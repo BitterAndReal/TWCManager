@@ -3,7 +3,7 @@ TWCManager lets you control the amount of power delivered by a Tesla Wall Connec
 
 Due to hardware limitations, TWCManager will not work with Tesla's older High Power Wall Connectors (HPWCs) that were discontinued around April 2016.
 
-UPDATE: and unfortunately also do not work with the V3 wifi TWC's that were released jan 2020.
+UPDATE: TWCManager will also not work with Generation 3 TWCs released around Jan 15th 2020.  Sadly, gen 2 TWCs are no longer sold by Tesla and may become hard to acquire over time.  We don't expect to add support for gen 3 TWCs unless their wireless protocol is reverse engineered by a third party.
 
 See **TWCManager Installation.pdf** for how to install and use.
 

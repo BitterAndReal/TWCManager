@@ -223,7 +223,8 @@ onlyChargeMultiCarsAtHome = True
 # North American 240V grid. In other words, during car charging, you want your
 # utility meter to show a value close to 0kW meaning no energy is being sent to
 # or from the grid.
-# greenEnergyAmpsOffset = 0
+# greenEnergyAmpsOffset = 0 # this is not used in this fork!
+#                             We measure the mains current
 
 # Choose how much debugging info to output.
 # 0 is no output other than errors.
@@ -267,12 +268,15 @@ fakeTWCID = bytearray(b'\x77\x77')
 masterSign = bytearray(b'\x77')
 slaveSign = bytearray(b'\x77')
 
-
-# set maxAmpsMains to 90% of the utility mains fuse of your house
+##############################
+# following parameters are added for BitterAndReal fork of TWCManager
+##############################
+# set UtilityMainsFuse to 90% of the utility mains fuse rating of your house
 # the most common main fuse values in the Netherlands are:
-#   single phase 35amps = 28
+#   (single phase 35amps = 28)
 #   or 3 phase 25amps = 22
-maxAmpsMains = 22
+# this fork is for 3 phase setup! It would need some changed to work with 1 phase
+UtilityMainsFuse = 22
 
 # for the socket connection to the current measure pi
 SocketServerIP = '192.168.0.67'  # The socket server's IP address
@@ -1291,9 +1295,10 @@ def background_tasks_thread():
 
 
 def check_utility_fuse_current():
-    global debugLevel, backgroundTasksLock, maxAmpsMains, \
+    global debugLevel, backgroundTasksLock, UtilityMainsFuse, \
         leftOverAmpsForAllTWCs, avgMainsAmps, connectionNO, LastMainsAmpsTime, \
-        SocketServerIP, SocketPort, avgMainsList, avgMainsAmpsChangeTime, \
+        SocketServerIP, SocketPort, \
+        GreenEnergyLeftForChargingList, GreenEnergyLeftForChargingChangeTime, \
         GreenEnergyLeftForCharging, MainsAmpsStatus
 
     now = time.time()
@@ -1432,7 +1437,7 @@ def check_utility_fuse_current():
 
         # calculate left over amps for all TWCs
         # and add it to the list of leftOverAmpsForAllTWCs calculations
-        leftOverAmpsForAllTWCsList.append(int(maxAmpsMains - maxMainsAmps + totalAmpsActualAllTWCs))
+        leftOverAmpsForAllTWCsList.append(int(UtilityMainsFuse - maxMainsAmps + totalAmpsActualAllTWCs))
         # use lowest value of the eftOverAmpsForAllTWCs calculations
         leftOverAmpsForAllTWCsList = leftOverAmpsForAllTWCsList[-leftOverAmpsForAllTWCsListLength:]
         if(debugLevel >= 12):
@@ -1447,32 +1452,29 @@ def check_utility_fuse_current():
         ##########################################################
 
         try:
-            avgMainsList
+            GreenEnergyLeftForChargingList
         except NameError:
-            avgMainsList = []
-            avgMainsAmpsChangeTime = 0
+            GreenEnergyLeftForChargingList = []
+            GreenEnergyLeftForChargingChangeTime = 0
 
-        # calculate average of all phases and insert at end of the list
-        avgMainsList.append(float(sum(MainsAmpsPhases)) / len(MainsAmpsPhases))
+        # calculate green energy left for charging
+        # use -1 * MainsAmps... because MainsAmpsPhases are negative if we send power back to the grid
+        # and GreenEnergyLeftForCharging should be a positive value if we have green energy left for charging
+        GreenEnergyLeftForChargingList.append(-1 * float(sum(MainsAmpsPhases)) / len(MainsAmpsPhases) + total_amps_actual_all_twcs())
 
-        # remove oldest value in list (slice list to AvgMainsListLength size)
-        # AvgMainsListLength = 60
-        # avgMainsList = avgMainsList[-AvgMainsListLength:]
+        # calculate average of the list and change GreenEnergyLeftForCharging every 5 minuts
+        if(now - GreenEnergyLeftForChargingChangeTime > 60*5 or GreenEnergyLeftForCharging == 0):
+            GreenEnergyLeftForCharging = int(sum(GreenEnergyLeftForChargingList) / len(GreenEnergyLeftForChargingList))
 
-        # calculate average of the list and change avgMainsAmps every 5 minuts
-        if(now - avgMainsAmpsChangeTime > 60*5 or avgMainsAmps == 0):
-            avgMainsAmps = float(sum(avgMainsList)) / len(avgMainsList)
             if(debugLevel >= 12):
-                print("new avgMainsAmps calculated ")
-            del avgMainsList[:]
-            avgMainsAmpsChangeTime = now
+                print("new GreenEnergyLeftForCharging calculated ")
+            del GreenEnergyLeftForChargingList[:]
+            GreenEnergyLeftForChargingChangeTime = now
 
-            # calculate green energy left over for charging
-            GreenEnergyLeftForCharging = int(avgMainsAmps + totalAmpsActualAllTWCs)
 
         MainsAmpsStatus = (
-            "L1:" + str(MainsAmpsPhases[0]) + "A __ " +
-            "L2:" + str(MainsAmpsPhases[1]) + "A __ " +
+            "L1:" + str(MainsAmpsPhases[0]) + "A ... " +
+            "L2:" + str(MainsAmpsPhases[1]) + "A ... " +
             "L3:" + str(MainsAmpsPhases[2]) + "A"
         )
         if(debugLevel >= 8):
@@ -1481,17 +1483,14 @@ def check_utility_fuse_current():
                   "   L3: " + str(MainsAmpsPhases[2]) +
                   "\n averaged max mains Amps: " + str(round(maxMainsAmps, 2)) +
                   "\n lowest leftOverAmpsForAllTWCs in list: " + str(leftOverAmpsForAllTWCs) +
-                  "\n last average mains Amps: " + str(round(avgMainsAmps, 2)) +
-                  "\n since last average update: " + str(round((now - avgMainsAmpsChangeTime) / 60, 1)) + " min" )
+                  "\n last GreenEnergyLeftForCharging: " + str(round(GreenEnergyLeftForCharging, 2)) +
+                  "\n since last GreenEnergyLeftForCharging update: " + str(round((now - GreenEnergyLeftForChargingChangeTime) / 60, 1)) + " min" )
 
 
 
     else:
         print(time_now() +
               " ERROR: Serial read mains sensor problem! ")
-
-#        del avgMainsList[:]
-        del mains[:]
 
         # if last valid MainsAmps from socket server is older than 15 sec
         # use 8Amps as limmit leftOverAmpsForAllTWCs
@@ -1504,6 +1503,7 @@ def check_utility_fuse_current():
             # this is not really save but for me it's more inmportant that the car keeps charging at a low amperage.
             leftOverAmpsForAllTWCs = 8
 
+            # show error on Web interface
             MainsAmpsStatus = (
                 "ERROR: No current reading! Charging current reduced to " +
                 str(leftOverAmpsForAllTWCs) + "A"
@@ -2166,13 +2166,13 @@ class TWCSlave:
                     # avgMainsAmps is an average of all 3 phases
                     # One phase could actually export energy while an other imports from the grid.
                     # But we just use an average because we cant control the charging current for each phase.
-                    if(GreenEnergyLeftForCharging < (-1 * minAmpsPerTWC)):
-                        maxAmpsToDivideAmongSlaves = -1 * GreenEnergyLeftForCharging
+                    if(GreenEnergyLeftForCharging >  minAmpsPerTWC):
+                        maxAmpsToDivideAmongSlaves = GreenEnergyLeftForCharging
 
         # Use backgroundTasksLock to prevent the background thread from changing
         # the value of maxAmpsToDivideAmongSlaves after we've checked the value
         # is safe to use but before we've used it.
-#        backgroundTasksLock.acquire() # not needed for this fork
+        backgroundTasksLock.acquire() # not needed for this fork
 
         if(maxAmpsToDivideAmongSlaves > wiringMaxAmpsAllTWCs):
             # Never tell the slaves to draw more amps than the physical charger
@@ -2218,7 +2218,7 @@ class TWCSlave:
                   + " with " + str(numCarsCharging)
                   + " cars charging.")
 
-#        backgroundTasksLock.release()
+        backgroundTasksLock.release()
 
         minAmpsToOffer = minAmpsPerTWC
         if(self.minAmpsTWCSupports > minAmpsToOffer):

@@ -1,24 +1,14 @@
 #!/usr/bin/env python3
 
 ##############################################################################
-# Socket Server on pi with current measure shield
-
+# Socket Server on raspberry pi with current measure shield
 ##############################################################################
 
 # this python script runs on a Raspberry pi with a current measure shield
 # and connets to a pi with TWCManager BitterAndReal fork
 
 # It measures how many amps are drawn at the utility mains to protect the main fuse of your house.
-# We want to reduce the charging current if we are using more than the mains fuse rating.
-
-# I used the following Raspberry pi zero shield to measure the utility mains current:
-# 3 current and 1 voltage adapter
-# http://lechacal.com/wiki/index.php?title=RPIZ_CT3V1
-# http://lechacalshop.com/gb/internetofthing/63-rpizct3v1.html
-
-# The current measure shield could be on the same Raspberry Pi as TWCmanager
-# if TWC and mains connection are far away from each other it is possible to use two
-# raspberry pi connected to the same network and connecting with a socket
+# And we can use the mains reading to calculate how much green energy we have left to charge the car.
 
 # Serial Output of the current measure print:
     # NodeID Realpower1 ApparentPower1 Irms1 Vrms1 PowerFactor1 Realpower2 ApparentPower2 Irms2 Vrms2 PowerFactor2 Realpower3 ApparentPower3 Irms3 Vrms3 PowerFactor3
@@ -41,40 +31,13 @@
     # mains[14] Vrms L3
     # mains[15] PowerFactor L3
 
-#####################################################################
-# this is how you prepare the pi to run the socket-server script:
-
-# $ sudo apt-get update
-# $ sudo apt-get install -y git
-# $ sudo apt-get install python3-pip
-# $ sudo python3 -m pip install pyserial
-
-# create this file on the Pi:
-# $ ​sudo nano ~/socket-server.py
-# copy the code of this file into it and save it
-
-# to start the socket server at boot...
-# $ ​sudo nano /etc/rc.local​
-# Near the end of the file, before the ​exit 0​ line, add:
-  # sudo python3 /home/pi/socket-server.py
-
-# How to make serial work on the Raspberry Pi3 , Pi3B+, PiZeroW:
-    # run $ sudo raspi-config
-    # Select Interfacing Options / Serial
-    # then specify if you want a Serial console (no)
-    # then if you want the Serial Port hardware enabled (yes).
-    # Then use /dev/serial0 in any code which accesses the Serial Port.
-
-# $ sudo apt-get install python-serial
-# $ sudo reboot
-
 
 import serial
 import socket
 import time
 import threading
 
-debugLevel = 2
+debugLevel = 0
 
 #HOST = '192.168.0.66' # Client adres???
 HOST = ''              # listening to all ports
@@ -136,14 +99,14 @@ def socket_server():
             conn, addr = s.accept()
 
             with conn:
-                if(debugLevel >= 1):
+                if(debugLevel >= 2):
                     print('Connected by', addr)
                 while True:
                     data = conn.recv(8)
                     if not data:
                         break
                     conn.sendall(message_to_send)
-                    if(debugLevel >= 2):
+                    if(debugLevel >= 1):
                         print("serial line sent")
 
 ########################

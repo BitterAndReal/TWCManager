@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 ##############################################################################
-# Socket Server on raspberry pi with current measure shield
+# Socket Server for raspberry pi with current measure shield
 ##############################################################################
 
 # this python script runs on a Raspberry pi with a current measure shield
@@ -39,8 +39,7 @@ import threading
 
 debugLevel = 0
 
-#HOST = '192.168.0.66' # Client adres???
-HOST = ''              # listening to all ports
+HOST = ''              # listening for all adresses
 PORT = 65432           # Port to listen on (non-privileged ports are > 1023)
 
 

@@ -35,11 +35,13 @@
 import serial
 import socket
 import time
+from datetime import datetime
 import threading
+import os
 
 debugLevel = 0
 
-HOST = ''              # listening for all adresses
+HOST = ''              # listening to all ports
 PORT = 65432           # Port to listen on (non-privileged ports are > 1023)
 
 
@@ -74,39 +76,45 @@ def read_serial():
         else:
             SerialReadErrorCount += 1
             SerialReadErrorInRow += 1
-            print(time_now() + "ERROR: could not read serial line (" +
+            print(time_now() + " ERROR: could not read serial line (" +
                 str(SerialReadErrorInRow) + "x in row,  " +
                 str(SerialReadErrorCount) + " total)")
             # if last valid serial reading is older than 5 sec send error
             if(time.time() - line_time > 5):
                 message_to_send = b'ERROR'
-                print(time_now() + "message_to_send = ERROR (" +
+                print(time_now() + " message_to_send = ERROR (" +
                     str(int(time.time() - line_time)) + " sec no reading)")
 
 def socket_server():
-    global message_to_send, line_time
+    try:
+        global message_to_send, line_time
 
-    while True: # loop forever
+        while True: # loop forever
 
-        time.sleep(0.2)
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((HOST, PORT))
-            s.listen()
-            if(debugLevel >= 2):
-                print("listening on port " + str(PORT))
-
-            conn, addr = s.accept()
-
-            with conn:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                time.sleep(0.3)
+                s.bind((HOST, PORT))
+                s.listen()
                 if(debugLevel >= 2):
-                    print('Connected by', addr)
-                while True:
-                    data = conn.recv(8)
-                    if not data:
-                        break
-                    conn.sendall(message_to_send)
-                    if(debugLevel >= 1):
-                        print("serial line sent")
+                    print("listening on port " + str(PORT))
+
+                conn, addr = s.accept()
+
+                with conn:
+                    if(debugLevel >= 2):
+                        print('Connected by', addr)
+                    while True:
+                        data = conn.recv(8)
+                        if not data:
+                            break
+                        conn.sendall(message_to_send)
+                        if(debugLevel >= 1):
+                            print("serial line sent")
+    except:   # or catch one specific error with 'except AttributeError:'
+        print (time_now() + " socket_server exception!")
+        time.sleep(60)
+        socket_server()
+        #os.system('sudo reboot')
 
 ########################
 # main thread
@@ -123,13 +131,13 @@ ss = threading.Thread(target=socket_server)
 sr.start()
 ss.start()
 
-print (time_now() + "read_serial & socket_server started")
+print (time_now() + " read_serial & socket_server started")
 
 while 1:
     time.sleep(1)
     if(sr.isAlive() == False):
         sr.start()
-        print (time_now() + "read_serial restarted!")
+        print (time_now() + " read_serial restarted!")
     if(ss.isAlive() == False):
         ss.start()
-        print (time_now() + "socket_server restarted!")
+        print (time_now() + " socket_server restarted!")

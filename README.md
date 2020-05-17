@@ -1,5 +1,5 @@
 # TWCManager
-**TWCManager let's you charge when power is available**
+**TWCManager let's you charge when green power is available and your not using it in the house.**
 ![TWCmanager](/TWCmanagerLoadSharing.png)
 TWCManager lets you control the amount of power delivered by a Tesla Wall Connector (TWC) to the car it's charging.  This can save around 6kWh per month when used to track a local green energy source like solar panels on your roof.  It can also avoid drawing grid energy for those without net metering or limit charging to times of day when prices are cheapest.
 
